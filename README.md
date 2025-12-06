@@ -2,6 +2,20 @@
 
 A fast, single-binary proxy server that bridges local LLM tools (expecting Ollama/OpenAI APIs) to Z.AI GLM Coding PaaS.
 
+**Version**: 0.1.0 (CLI) / 0.6.4 (API compatibility)
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Supported Models](#supported-models)
+- [Capabilities](#capabilities)
+- [API Endpoints](#api-endpoints)
+- [Development](#development)
+- [Technical Details](#technical-details)
+- [License](#license)
+
 ## Features
 
 -   **Drop-in Ollama replacement** - Listens on port 11434 by default
@@ -26,7 +40,7 @@ make build
 ./bin/copilot-proxy config set api_key YOUR_API_KEY_HERE
 
 # Optional: Set custom base URL
-./bin/copilot-proxy config set base_url https://api.z.ai
+./bin/copilot-proxy config set base_url https://api.z.ai/api/coding/paas/v4
 ```
 
 ### Run
@@ -53,9 +67,10 @@ Configure your tool to use:
 ### Environment Variables
 
 -   `ZAI_API_KEY`, `ZAI_CODING_API_KEY`, or `GLM_API_KEY` - Your API key
--   `ZAI_BASE_URL` - Base URL for Z.AI API (default: `https://api.z.ai`)
+-   `ZAI_BASE_URL` - Base URL for Z.AI API (default: `https://api.z.ai/api/coding/paas/v4`)
 -   `ZAI_HOST` - Host to bind server to (default: `127.0.0.1`)
 -   `ZAI_PORT` - Port to listen on (default: `11434`)
+-   `ZAI_DEBUG` - Enable debug mode (default: `false`)
 
 ### CLI Commands
 
@@ -63,11 +78,15 @@ Configure your tool to use:
 # Start the server
 copilot-proxy serve
 
+# Start with custom host/port/debug
+copilot-proxy serve --host 0.0.0.0 --port 8080 --debug
+
 # Set configuration
 copilot-proxy config set api_key YOUR_KEY
-copilot-proxy config set base_url https://api.z.ai
+copilot-proxy config set base_url https://api.z.ai/api/coding/paas/v4
 copilot-proxy config set host 127.0.0.1
 copilot-proxy config set port 11434
+copilot-proxy config set debug true
 
 # Get configuration
 copilot-proxy config get api_key
@@ -100,7 +119,7 @@ To satisfy Ollama-compatible clients (like Copilot and various WebUIs), the prox
 
 -   `GET /api/tags` - Returns the complete model catalog with capabilities.
 -   `GET /api/list` - Alias for `/api/tags`.
--   `GET /api/version` - Returns the API version (mimics Ollama versioning).
+-   `GET /api/version` - Returns the API version (mimics Ollama versioning, currently 0.6.4).
 -   `GET /api/ps` - Returns list of running models (empty for this proxy).
 -   `POST /api/show` - Returns detailed model metadata, including context length, parameters, and advertised capabilities (Tools, Vision). Accepts both `name` and `model` parameters.
 
@@ -109,6 +128,10 @@ To satisfy Ollama-compatible clients (like Copilot and various WebUIs), the prox
 -   `POST /v1/chat/completions` - Standard OpenAI-compatible format, proxied to Z.AI Coding PaaS.
 -   `POST /api/chat` - Ollama-style chat endpoint (internally aliased to `v1/chat/completions` logic).
 
+### Health Check
+
+-   `GET /healthz` - Simple health check endpoint returning `{"status": "ok"}`.
+
 > **Note**: The proxy automatically intercepts chat requests to inject `thinking: { "type": "enabled" }`, ensuring the model's reasoning capabilities are active.
 
 ## Development
@@ -116,13 +139,17 @@ To satisfy Ollama-compatible clients (like Copilot and various WebUIs), the prox
 ### Build
 
 ```bash
-make build        # Build binary
+make build        # Build binary with green tea GC experiment
 make install      # Install to $GOPATH/bin
 make test         # Run tests
 make lint         # Run linter
 make format       # Format code
 make clean        # Clean build artifacts
+make dev          # Build and run in development mode
+make all          # Format, lint, test, and build
 ```
+
+> **Note**: The build uses Go's green tea GC experiment (`GOEXPERIMENT=greenteagc`) for improved performance in production environments.
 
 ### Project Structure
 
@@ -131,18 +158,24 @@ copilot-proxy/
 ├── main.go                    # Entry point with godotenv autoload
 ├── cmd/                       # CLI commands
 │   ├── root.go               # Cobra root command
-│   ├── serve.go              # Serve command
-│   └── config.go             # Config management
+│   ├── serve.go              # Serve command with graceful shutdown
+│   └── config.go             # Config management commands
 ├── internal/
 │   ├── config/               # Configuration management
-│   │   └── config.go         # Viper config struct
+│   │   └── config.go         # Viper-based config with multiple sources
 │   ├── server/               # HTTP server
-│   │   ├── server.go         # Server setup
-│   │   └── handlers.go       # Route handlers
+│   │   ├── server.go         # Server setup with optimized client
+│   │   └── handlers.go       # Route handlers for all endpoints
 │   └── models/               # Data models
-│       └── catalog.go        # Static model catalog
-├── go.mod                     # Go module
-└── Makefile                   # Build automation
+│       └── catalog.go        # Static model catalog with capabilities
+├── go.mod                     # Go module definition
+├── go.sum                     # Go module checksums
+├── Makefile                   # Build automation with green tea GC
+├── run_format.sh              # Code formatting script
+├── run_lint.sh                # Linting script
+├── run_test.sh                # Test running script
+└── docs/                      # Documentation
+    └── architecture_overview.md # Detailed architecture documentation
 ```
 
 ## Technical Details
@@ -162,6 +195,10 @@ Responses are streamed with a 32KB buffer and explicit flushes for SSE support, 
 ### Graceful Shutdown
 
 The server handles SIGINT/SIGTERM signals and waits up to 30 seconds for in-flight requests to complete before shutting down.
+
+### Debug Logging
+
+When debug mode is enabled (via `ZAI_DEBUG=true` or `copilot-proxy config set debug true`), the proxy logs detailed information to both console and a log file at `$TMPDIR/copilot-proxy.log`. This includes request/response details and internal operations for troubleshooting.
 
 ## License
 
