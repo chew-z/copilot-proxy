@@ -42,8 +42,14 @@ func runServe(cmd *cobra.Command, args []string) {
 	}
 
 	// Get host and port from flags (highest precedence)
-	host, _ := cmd.Flags().GetString("host")
-	port, _ := cmd.Flags().GetInt("port")
+	host, err := cmd.Flags().GetString("host")
+	if err != nil {
+		log.Fatalf("Failed to get host flag: %v", err)
+	}
+	port, err := cmd.Flags().GetInt("port")
+	if err != nil {
+		log.Fatalf("Failed to get port flag: %v", err)
+	}
 
 	// Use config values only if flags weren't provided (use default flag values to check)
 	defaultHost := "127.0.0.1"
@@ -60,7 +66,10 @@ func runServe(cmd *cobra.Command, args []string) {
 	}
 
 	// Get debug flag (CLI flag overrides config)
-	debug, _ := cmd.Flags().GetBool("debug")
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		log.Fatalf("Failed to get debug flag: %v", err)
+	}
 	if debug {
 		cfg.Debug = true
 	}

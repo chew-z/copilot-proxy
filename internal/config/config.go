@@ -56,13 +56,13 @@ func Load() (*Config, error) {
 	v.AutomaticEnv()
 
 	// Bind specific environment variables
-	v.BindEnv("api_key", "ZAI_API_KEY")
-	v.BindEnv("api_key", "ZAI_CODING_API_KEY")
-	v.BindEnv("api_key", "GLM_API_KEY")
-	v.BindEnv("base_url", "ZAI_BASE_URL")
-	v.BindEnv("host", "ZAI_HOST")
-	v.BindEnv("port", "ZAI_PORT")
-	v.BindEnv("debug", "ZAI_DEBUG")
+	_ = v.BindEnv("api_key", "ZAI_API_KEY")
+	_ = v.BindEnv("api_key", "ZAI_CODING_API_KEY")
+	_ = v.BindEnv("api_key", "GLM_API_KEY")
+	_ = v.BindEnv("base_url", "ZAI_BASE_URL")
+	_ = v.BindEnv("host", "ZAI_HOST")
+	_ = v.BindEnv("port", "ZAI_PORT")
+	_ = v.BindEnv("debug", "ZAI_DEBUG")
 
 	// Try to read config file (ignore if not found)
 	if err := v.ReadInConfig(); err != nil {

@@ -95,14 +95,14 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 
 	// Intercept and modify body to inject "thinking"
 	var bodyMap map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &bodyMap); err == nil {
+	if unmarshalErr := json.Unmarshal(bodyBytes, &bodyMap); unmarshalErr == nil {
 		// Inject thinking parameter
 		bodyMap["thinking"] = map[string]string{
 			"type": "enabled",
 		}
 
 		// Re-marshal body
-		if newBodyBytes, err := json.Marshal(bodyMap); err == nil {
+		if newBodyBytes, marshalErr := json.Marshal(bodyMap); marshalErr == nil {
 			bodyBytes = newBodyBytes
 		}
 		// If marshaling fails, we just use original body (fail safe)
