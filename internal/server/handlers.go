@@ -86,40 +86,18 @@ func (s *Server) handleShow(c *gin.Context) {
 
 // handleChatCompletions proxies requests to Z.AI API
 func (s *Server) handleChatCompletions(c *gin.Context) {
-	var req api.ChatRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Parse request as a map to preserve all fields (e.g., tools, tool_choice)
+	// that might be missing from our strict struct definition
+	var bodyMap map[string]any
+	if err := c.ShouldBindJSON(&bodyMap); err != nil {
 		handleError(c, api.ErrBadRequest("Invalid request: "+err.Error()))
 		return
 	}
 
 	// Validate model exists in catalog
-	if !models.IsValidModel(req.Model) {
-		handleError(c, api.ErrNotFound(fmt.Sprintf("model '%s' not found", req.Model)))
-		return
-	}
-
-	// Set Content-Type based on streaming mode (Ollama pattern)
-	// Default is streaming (stream=true or stream=nil)
-	if req.Stream == nil || *req.Stream {
-		c.Header("Content-Type", "application/x-ndjson")
-	} else {
-		c.Header("Content-Type", "application/json; charset=utf-8")
-	}
-
-	// Inject thinking parameter
-	if req.Options == nil {
-		req.Options = make(map[string]any)
-	}
-
-	bodyBytes, err := json.Marshal(req)
-	if err != nil {
-		handleError(c, api.ErrInternalServer("Failed to marshal request"))
-		return
-	}
-
-	var bodyMap map[string]interface{}
-	if unmarshalErr := json.Unmarshal(bodyBytes, &bodyMap); unmarshalErr != nil {
-		handleError(c, api.ErrInternalServer("Failed to process request body"))
+	modelName, _ := bodyMap["model"].(string)
+	if !models.IsValidModel(modelName) {
+		handleError(c, api.ErrNotFound(fmt.Sprintf("model '%s' not found", modelName)))
 		return
 	}
 
@@ -164,12 +142,10 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	// Copy response headers (except Content-Type which we already set)
+	// Copy response headers
 	for key, values := range resp.Header {
-		if key != "Content-Type" {
-			for _, value := range values {
-				c.Writer.Header().Add(key, value)
-			}
+		for _, value := range values {
+			c.Writer.Header().Add(key, value)
 		}
 	}
 
