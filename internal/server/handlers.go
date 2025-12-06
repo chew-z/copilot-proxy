@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -55,10 +56,16 @@ func (s *Server) handleShow(c *gin.Context) {
 		modelName = "GLM-4.6"
 	}
 
+	// Determine context length based on model
+	contextLength := 128000 // Default for GLM-4.5
+	if modelName == "GLM-4.6" {
+		contextLength = 200000
+	}
+
 	// Construct response matching the Python reference implementation
 	response := gin.H{
 		"template":     "{{ .System }}\n{{ .Prompt }}",
-		"capabilities": []string{"tools"},
+		"capabilities": []string{"tools", "vision"},
 		"details": gin.H{
 			"family":             "glm",
 			"families":           []string{"glm"},
@@ -69,7 +76,7 @@ func (s *Server) handleShow(c *gin.Context) {
 		"model_info": gin.H{
 			"general.basename":     modelName,
 			"general.architecture": "glm",
-			"glm.context_length":   32768,
+			"glm.context_length":   contextLength,
 		},
 	}
 
@@ -79,16 +86,31 @@ func (s *Server) handleShow(c *gin.Context) {
 // handleChatCompletions proxies requests to Z.AI API
 func (s *Server) handleChatCompletions(c *gin.Context) {
 	// Read the request body
-	body, err := io.ReadAll(c.Request.Body)
+	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		s.sendError(c, http.StatusBadRequest, "Failed to read request body")
 		return
 	}
 	defer c.Request.Body.Close()
 
+	// Intercept and modify body to inject "thinking"
+	var bodyMap map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &bodyMap); err == nil {
+		// Inject thinking parameter
+		bodyMap["thinking"] = map[string]string{
+			"type": "enabled",
+		}
+
+		// Re-marshal body
+		if newBodyBytes, err := json.Marshal(bodyMap); err == nil {
+			bodyBytes = newBodyBytes
+		}
+		// If marshaling fails, we just use original body (fail safe)
+	}
+
 	// Create upstream request
 	upstreamURL := s.config.BaseURL + "/chat/completions"
-	req, err := http.NewRequestWithContext(c.Request.Context(), "POST", upstreamURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(c.Request.Context(), "POST", upstreamURL, bytes.NewReader(bodyBytes))
 	if err != nil {
 		s.sendError(c, http.StatusInternalServerError, "Failed to create upstream request")
 		return
