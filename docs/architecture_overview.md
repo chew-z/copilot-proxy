@@ -60,24 +60,28 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 
 #### 4. HTTP Server (`internal/server/`)
 - **Gin-based HTTP router** with middleware support
+- **CORS middleware** with configurable origins, methods, and headers
 - **Optimized HTTP client** with connection pooling:
   - `MaxIdleConnsPerHost: 50` (vs default 2)
   - `IdleConnTimeout: 90s`
   - `Timeout: 120s` for streaming requests
 - **Graceful shutdown** with 30-second timeout
 - **Debug mode** with file-based logging to `$TMPDIR/copilot-proxy.log`
+- **Context-aware request handling** with proper cancellation propagation
 
 #### 5. Request Handlers (`internal/server/handlers.go`)
 - **Model Discovery Endpoints**:
   - `/api/tags`, `/api/list`: Static model catalog
-  - `/api/version`: API version information
+  - `/api/version`: API version information (currently 0.6.4)
   - `/api/ps`: Empty running models list
-  - `/api/show`: Model metadata with context lengths
+  - `/api/show`: Model metadata with context lengths (200k for GLM-4.6, 128k for GLM-4.5)
 - **Chat Completion Proxy**:
-  - `/v1/chat/completions`, `/api/chat`: Request forwarding
+  - `/v1/chat/completions`, `/api/chat`: Request forwarding with model validation
   - **Automatic "thinking" injection** for enhanced reasoning
-  - **Streaming support** with 32KB buffer and SSE flushing
+  - **Context-aware streaming** with 32KB buffer and SSE flushing
+  - **Client disconnection detection** with proper context cancellation handling
 - **Health Check**: `/healthz` endpoint
+- **Error Handling**: Standardized error responses with context-aware cancellation detection (HTTP 499 for client disconnections)
 
 #### 6. Model Catalog (`internal/models/`)
 - **Static model definitions** for GLM-4.6, GLM-4.5, GLM-4.5-Air
@@ -89,13 +93,13 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 ### Request Processing Flow
 
 ```
-1. Client Request → HTTP Router
+1. Client Request → CORS Middleware → HTTP Router
 2. Router → Appropriate Handler
-3. Handler → Request Validation
-4. Handler → Request Modification (if chat completion)
-5. Handler → Upstream HTTP Request
-6. Upstream Response → Response Streaming
-7. Response → Client
+3. Handler → Model Validation (for chat completions)
+4. Handler → Request Modification (thinking injection)
+5. Handler → Context-Aware Upstream Request
+6. Upstream Response → Context-Aware Response Streaming
+7. Response → Client (with proper disconnection handling)
 ```
 
 ### Configuration Loading Flow
@@ -105,6 +109,15 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 2. Config File Read → Merge (if exists)
 3. Environment Variables → Merge (if set)
 4. Final Config → Application Components
+```
+
+### Error Handling Flow
+
+```
+1. Error Detection → Context Cancellation Check
+2. Standardized Error Response → HTTP Status Code Mapping
+3. Client Disconnection → HTTP 499 Response
+4. Upstream Errors → Proper Error Propagation
 ```
 
 ## Key Design Patterns
@@ -119,7 +132,13 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 - **Multiple sources** with clear priority rules
 - **Environment variable aliases** for flexibility
 
-### 3. Graceful Degradation
+### 3. Context-Aware Request Handling
+- **Context propagation** throughout the request lifecycle
+- **Client disconnection detection** with HTTP 499 responses
+- **Graceful cancellation** of upstream requests on client disconnect
+- **Non-blocking I/O** with proper context checking
+
+### 4. Graceful Degradation
 - **Fail-safe operation** when config file is missing
 - **Fallback to defaults** for all configuration options
 - **Error handling** without service interruption
@@ -132,10 +151,11 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 ## Technology Stack
 
 ### Core Dependencies
-- **Gin**: HTTP web framework (routing, middleware)
+- **Gin**: HTTP web framework (routing, middleware, CORS)
 - **Cobra**: CLI framework for command structure
 - **Viper**: Configuration management with multiple sources
 - **godotenv**: Environment variable loading from .env files
+- **gin-contrib/cors**: CORS middleware for cross-origin requests
 
 ### Go Version
 - **Go 1.25.5** with modern language features
@@ -144,16 +164,13 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 
 ## Security Considerations
 
-### API Key Management
+### Request Validation
 - **Multiple environment variable names** for flexibility
 - **Masked display** in configuration commands
 - **No logging** of sensitive information
 - **Bearer token** authentication for upstream requests
-
-### Request Validation
-- **Content-Type validation** for incoming requests
-- **JSON parsing** with error handling
-- **Context propagation** for request cancellation
+- **Model validation** against static catalog before forwarding
+- **Context-aware error handling** with proper HTTP status codes
 
 ## Performance Optimizations
 
@@ -166,6 +183,8 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 - **32KB buffer** for memory efficiency
 - **Explicit flushing** for real-time SSE delivery
 - **Non-blocking I/O** for concurrent request handling
+- **Context-aware streaming** with client disconnection detection
+- **Proper resource cleanup** on cancellation
 
 ### Memory Management
 - **Request body buffering** only when necessary
@@ -194,8 +213,10 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 
 ### Handler Extension
 - **Modular handler structure** for new endpoints
-- **Middleware support** for cross-cutting concerns
+- **Middleware support** for cross-cutting concerns (CORS, logging)
 - **Request/response transformation** hooks
+- **Context-aware error handling** with standardized responses
+- **Model validation framework** for extensibility
 
 ### Configuration Extension
 - **Viper-based** system supports new configuration keys
@@ -205,10 +226,11 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 ## Monitoring and Observability
 
 ### Logging Strategy
-- **Debug mode** with file-based logging
-- **Structured logging** through Gin framework
+- **Debug mode** with file-based logging to `$TMPDIR/copilot-proxy.log`
+- **Structured logging** through Gin framework and slog
 - **Request/response logging** in debug mode
 - **Error logging** with context information
+- **Client disconnection logging** for debugging
 
 ### Health Monitoring
 - **Health check endpoint** for service monitoring
@@ -217,4 +239,4 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 
 ## Conclusion
 
-Copilot Proxy demonstrates a well-architected Go application that balances simplicity with functionality. The clean separation of concerns, optimized HTTP handling, and thoughtful configuration management make it a robust bridge between local development tools and cloud-based AI services. The architecture supports both development flexibility and production reliability through its modular design and performance optimizations.
+Copilot Proxy demonstrates a well-architected Go application that balances simplicity with functionality. The clean separation of concerns, optimized HTTP handling, thoughtful configuration management, and context-aware request processing make it a robust bridge between local development tools and cloud-based AI services. The architecture supports both development flexibility and production reliability through its modular design, performance optimizations, and comprehensive error handling with proper client disconnection detection.
