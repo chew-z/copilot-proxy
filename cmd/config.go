@@ -21,7 +21,8 @@ var configSetCmd = &cobra.Command{
 - api_key: Your Z.AI API key
 - base_url: Base URL for Z.AI API (default: https://api.z.ai)
 - host: Host to bind server to (default: 127.0.0.1)
-- port: Port to listen on (default: 11434)`,
+- port: Port to listen on (default: 11434)
+- debug: Enable debug mode (true/false)`,
 	Args: cobra.ExactArgs(2),
 	Run:  runConfigSet,
 }
@@ -33,7 +34,8 @@ var configGetCmd = &cobra.Command{
 - api_key: Your Z.AI API key (masked)
 - base_url: Base URL for Z.AI API
 - host: Host to bind server to
-- port: Port to listen on`,
+- port: Port to listen on
+- debug: Debug mode enabled`,
 	Args: cobra.ExactArgs(1),
 	Run:  runConfigGet,
 }
@@ -54,10 +56,11 @@ func runConfigSet(cmd *cobra.Command, args []string) {
 		"base_url": true,
 		"host":     true,
 		"port":     true,
+		"debug":    true,
 	}
 
 	if !validKeys[key] {
-		log.Fatalf("Invalid key: %s. Valid keys are: api_key, base_url, host, port", key)
+		log.Fatalf("Invalid key: %s. Valid keys are: api_key, base_url, host, port, debug", key)
 	}
 
 	// Load existing config
@@ -81,6 +84,15 @@ func runConfigSet(cmd *cobra.Command, args []string) {
 			log.Fatalf("Invalid port value: %s. Must be an integer.", value)
 		}
 		cfg.Port = portInt
+	case "debug":
+		// Parse boolean
+		if value == "true" || value == "1" {
+			cfg.Debug = true
+		} else if value == "false" || value == "0" {
+			cfg.Debug = false
+		} else {
+			log.Fatalf("Invalid debug value: %s. Must be true or false.", value)
+		}
 	}
 
 	// Save the updated config
@@ -115,8 +127,10 @@ func runConfigGet(cmd *cobra.Command, args []string) {
 		if cfg.Port != 0 {
 			value = fmt.Sprintf("%d", cfg.Port)
 		}
+	case "debug":
+		value = fmt.Sprintf("%t", cfg.Debug)
 	default:
-		log.Fatalf("Invalid key: %s. Valid keys are: api_key, base_url, host, port", key)
+		log.Fatalf("Invalid key: %s. Valid keys are: api_key, base_url, host, port, debug", key)
 	}
 
 	if value == "" {

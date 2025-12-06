@@ -26,6 +26,7 @@ func init() {
 	// Add flags for serve command
 	serveCmd.Flags().StringP("host", "H", "127.0.0.1", "Host to bind the server to")
 	serveCmd.Flags().IntP("port", "p", 11434, "Port to listen on")
+	serveCmd.Flags().BoolP("debug", "d", false, "Enable debug mode (verbose logging)")
 }
 
 func runServe(cmd *cobra.Command, args []string) {
@@ -56,6 +57,12 @@ func runServe(cmd *cobra.Command, args []string) {
 	// If port flag is still at default value, check config
 	if port == defaultPort && cfg.Port != 0 {
 		port = cfg.Port
+	}
+
+	// Get debug flag (CLI flag overrides config)
+	debug, _ := cmd.Flags().GetBool("debug")
+	if debug {
+		cfg.Debug = true
 	}
 
 	// Create and start server

@@ -3,7 +3,11 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/chew-z/copilot-proxy/internal/config"
@@ -20,12 +24,39 @@ type Server struct {
 
 // NewServer creates a new server instance
 func NewServer(cfg *config.Config, host string, port int) *Server {
-	// Set Gin to release mode for production
-	gin.SetMode(gin.ReleaseMode)
+	// Set Gin mode based on config
+	if cfg.Debug {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// Setup logging
+	if cfg.Debug {
+		// Log to file in $TMPDIR
+		logPath := filepath.Join(os.TempDir(), "copilot-proxy.log")
+		logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			log.Printf("Warning: Could not create log file %s: %v", logPath, err)
+		} else {
+			// Write to both file and stdout
+			gin.DefaultWriter = io.MultiWriter(logFile, os.Stdout)
+			gin.DefaultErrorWriter = io.MultiWriter(logFile, os.Stderr)
+			log.Printf("Logging to %s", logPath)
+		}
+	} else {
+		// In release mode, disable console color for cleaner logs
+		gin.DisableConsoleColor()
+	}
 
 	// Create router
 	router := gin.New()
 	router.Use(gin.Recovery())
+
+	// Add logger middleware in debug mode
+	if cfg.Debug {
+		router.Use(gin.Logger())
+	}
 
 	// Create optimized HTTP client
 	client := &http.Client{

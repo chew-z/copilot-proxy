@@ -14,6 +14,7 @@ type Config struct {
 	BaseURL string `mapstructure:"base_url"`
 	Host    string `mapstructure:"host"`
 	Port    int    `mapstructure:"port"`
+	Debug   bool   `mapstructure:"debug"`
 }
 
 // DefaultConfig returns the default configuration
@@ -37,6 +38,7 @@ func Load() (*Config, error) {
 	v.SetDefault("base_url", defaultCfg.BaseURL)
 	v.SetDefault("host", defaultCfg.Host)
 	v.SetDefault("port", defaultCfg.Port)
+	v.SetDefault("debug", defaultCfg.Debug)
 
 	// Set config file name and paths
 	v.SetConfigName("config")
@@ -60,6 +62,7 @@ func Load() (*Config, error) {
 	v.BindEnv("base_url", "ZAI_BASE_URL")
 	v.BindEnv("host", "ZAI_HOST")
 	v.BindEnv("port", "ZAI_PORT")
+	v.BindEnv("debug", "ZAI_DEBUG")
 
 	// Try to read config file (ignore if not found)
 	if err := v.ReadInConfig(); err != nil {
@@ -107,6 +110,7 @@ func Save(cfg *Config) error {
 	v.Set("base_url", cfg.BaseURL)
 	v.Set("host", cfg.Host)
 	v.Set("port", cfg.Port)
+	v.Set("debug", cfg.Debug)
 
 	// Write config file
 	configPath := filepath.Join(configDir, "config.json")
