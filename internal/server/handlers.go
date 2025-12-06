@@ -3,18 +3,22 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/chew-z/copilot-proxy/internal/api"
 	"github.com/chew-z/copilot-proxy/internal/models"
 	"github.com/gin-gonic/gin"
 )
 
-// sendError sends a standardized error response
-func (s *Server) sendError(c *gin.Context, code int, message string) {
-	c.JSON(code, gin.H{
-		"error": message,
-	})
+// handleError sends a standardized error response
+func handleError(c *gin.Context, err error) {
+	if se, ok := err.(*api.StatusError); ok {
+		c.JSON(se.StatusCode, se)
+		return
+	}
+	c.JSON(http.StatusInternalServerError, api.StatusError{ErrorMessage: err.Error()})
 }
 
 // handleVersion returns the API version
@@ -38,42 +42,31 @@ func (s *Server) handleTags(c *gin.Context) {
 
 // handleShow returns model metadata
 func (s *Server) handleShow(c *gin.Context) {
-	// Parse request body to get model name
-	// Ollama standard is "name", but reference implementation uses "model"
-	var request struct {
-		Name  string `json:"name"`
-		Model string `json:"model"`
-	}
-
+	var req api.ShowRequest
 	// We don't strictly require the body to be valid, if it's empty we'll use default
-	_ = c.ShouldBindJSON(&request)
+	_ = c.ShouldBindJSON(&req)
 
-	modelName := request.Name
+	modelName := req.Name
 	if modelName == "" {
-		modelName = request.Model
+		modelName = req.Model
 	}
 	if modelName == "" {
 		modelName = "GLM-4.6"
 	}
 
-	// Determine context length based on model
-	contextLength := 128000 // Default for GLM-4.5
-	if modelName == "GLM-4.6" {
-		contextLength = 200000
-	}
+	contextLength := models.GetModelContextLength(modelName)
 
-	// Construct response matching the Python reference implementation
-	response := gin.H{
-		"template":     "{{ .System }}\n{{ .Prompt }}",
-		"capabilities": []string{"tools", "vision"},
-		"details": gin.H{
-			"family":             "glm",
-			"families":           []string{"glm"},
-			"format":             "glm",
-			"parameter_size":     "cloud",
-			"quantization_level": "cloud",
+	response := api.ShowResponse{
+		Template:     "{{ .System }}\n{{ .Prompt }}",
+		Capabilities: []string{"tools", "vision"},
+		Details: api.ModelDetails{
+			Family:            "glm",
+			Families:          []string{"glm"},
+			Format:            "glm",
+			ParameterSize:     "cloud",
+			QuantizationLevel: "cloud",
 		},
-		"model_info": gin.H{
+		ModelInfo: map[string]any{
 			"general.basename":     modelName,
 			"general.architecture": "glm",
 			"glm.context_length":   contextLength,
@@ -85,53 +78,75 @@ func (s *Server) handleShow(c *gin.Context) {
 
 // handleChatCompletions proxies requests to Z.AI API
 func (s *Server) handleChatCompletions(c *gin.Context) {
-	// Read the request body
-	bodyBytes, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		s.sendError(c, http.StatusBadRequest, "Failed to read request body")
+	var req api.ChatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handleError(c, api.ErrBadRequest("Invalid request: "+err.Error()))
 		return
 	}
-	defer c.Request.Body.Close()
 
-	// Intercept and modify body to inject "thinking"
+	// Validate model exists in catalog
+	if !models.IsValidModel(req.Model) {
+		handleError(c, api.ErrNotFound(fmt.Sprintf("model '%s' not found", req.Model)))
+		return
+	}
+
+	// Inject thinking parameter
+	if req.Options == nil {
+		req.Options = make(map[string]any)
+	}
+	// Note: We're keeping the original behavior of injecting into the body map for forwarding,
+	// but validating with the struct first.
+	// To forward, we unfortunately need to re-marshal including the injected fields if we want to rely on struct,
+	// or just work with the map.
+	// Given the original code worked with explicit body map modification, let's create a map from the struct
+	// to ensure we send exactly what we validated + our injections.
+
+	// However, we need to send "thinking" param which is not in standard Ollama request but is custom for Z.AI?
+	// The original code injected: bodyMap["thinking"] = map[string]string{"type": "enabled"}
+	// Let's replicate this.
+
+	bodyBytes, err := json.Marshal(req)
+	if err != nil {
+		handleError(c, api.ErrInternalServer("Failed to marshal request"))
+		return
+	}
+
 	var bodyMap map[string]interface{}
-	if unmarshalErr := json.Unmarshal(bodyBytes, &bodyMap); unmarshalErr == nil {
-		// Inject thinking parameter
-		bodyMap["thinking"] = map[string]string{
-			"type": "enabled",
-		}
+	if unmarshalErr := json.Unmarshal(bodyBytes, &bodyMap); unmarshalErr != nil {
+		handleError(c, api.ErrInternalServer("Failed to process request body"))
+		return
+	}
 
-		// Re-marshal body
-		if newBodyBytes, marshalErr := json.Marshal(bodyMap); marshalErr == nil {
-			bodyBytes = newBodyBytes
-		}
-		// If marshaling fails, we just use original body (fail safe)
+	bodyMap["thinking"] = map[string]string{
+		"type": "enabled",
+	}
+
+	newBodyBytes, err := json.Marshal(bodyMap)
+	if err != nil {
+		handleError(c, api.ErrInternalServer("Failed to prepare upstream request"))
+		return
 	}
 
 	// Create upstream request
 	upstreamURL := s.config.BaseURL + "/chat/completions"
-	req, err := http.NewRequestWithContext(c.Request.Context(), "POST", upstreamURL, bytes.NewReader(bodyBytes))
+	upstreamReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", upstreamURL, bytes.NewReader(newBodyBytes))
 	if err != nil {
-		s.sendError(c, http.StatusInternalServerError, "Failed to create upstream request")
+		handleError(c, api.ErrInternalServer("Failed to create upstream request"))
 		return
 	}
 
-	// Copy Content-Type header
-	if contentType := c.GetHeader("Content-Type"); contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	} else {
-		req.Header.Set("Content-Type", "application/json")
-	}
+	// Set Content-Type
+	upstreamReq.Header.Set("Content-Type", "application/json")
 
 	// Add Authorization header
 	if s.config.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+s.config.APIKey)
+		upstreamReq.Header.Set("Authorization", "Bearer "+s.config.APIKey)
 	}
 
 	// Execute request
-	resp, err := s.client.Do(req)
+	resp, err := s.client.Do(upstreamReq)
 	if err != nil {
-		s.sendError(c, http.StatusBadGateway, "Failed to connect to upstream server")
+		handleError(c, api.ErrBadGateway("Failed to connect to upstream server"))
 		return
 	}
 	defer resp.Body.Close()

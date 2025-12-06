@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/chew-z/copilot-proxy/internal/config"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,12 +38,18 @@ func NewServer(cfg *config.Config, host string, port int) *Server {
 		logPath := filepath.Join(os.TempDir(), "copilot-proxy.log")
 		logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			log.Printf("Warning: Could not create log file %s: %v", logPath, err)
+			slog.Error("Could not create log file", "path", logPath, "error", err)
 		} else {
 			// Write to both file and stdout
 			gin.DefaultWriter = io.MultiWriter(logFile, os.Stdout)
 			gin.DefaultErrorWriter = io.MultiWriter(logFile, os.Stderr)
-			log.Printf("Logging to %s", logPath)
+
+			// Setup slog
+			handler := slog.NewTextHandler(io.MultiWriter(logFile, os.Stdout), &slog.HandlerOptions{
+				Level: slog.LevelDebug,
+			})
+			slog.SetDefault(slog.New(handler))
+			slog.Info("Logging initialized", "path", logPath)
 		}
 	} else {
 		// In release mode, disable console color for cleaner logs
@@ -57,6 +64,16 @@ func NewServer(cfg *config.Config, host string, port int) *Server {
 	if cfg.Debug {
 		router.Use(gin.Logger())
 	}
+
+	// Add CORS middleware
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Create optimized HTTP client
 	client := &http.Client{

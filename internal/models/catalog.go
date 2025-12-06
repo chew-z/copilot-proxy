@@ -50,3 +50,25 @@ var Catalog = map[string]interface{}{
 		},
 	},
 }
+
+// IsValidModel checks if a model name exists in the catalog
+func IsValidModel(name string) bool {
+	models, ok := Catalog["models"].([]map[string]interface{})
+	if !ok {
+		return false
+	}
+	for _, m := range models {
+		if m["name"] == name || m["model"] == name {
+			return true
+		}
+	}
+	return false
+}
+
+// GetModelContextLength returns the context length for a model
+func GetModelContextLength(name string) int {
+	if name == "GLM-4.6" {
+		return 200000
+	}
+	return 128000 // Default for GLM-4.5
+}
