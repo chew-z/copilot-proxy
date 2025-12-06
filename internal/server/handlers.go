@@ -2,9 +2,12 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/chew-z/copilot-proxy/internal/api"
@@ -12,8 +15,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// handleError sends a standardized error response
+// handleError sends a standardized error response with context-aware cancellation handling
 func handleError(c *gin.Context, err error) {
+	// Check for context cancellation (client disconnected)
+	if errors.Is(err, context.Canceled) {
+		c.JSON(499, gin.H{"error": "request canceled"})
+		return
+	}
 	if se, ok := err.(*api.StatusError); ok {
 		c.JSON(se.StatusCode, se)
 		return
@@ -90,20 +98,18 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 		return
 	}
 
+	// Set Content-Type based on streaming mode (Ollama pattern)
+	// Default is streaming (stream=true or stream=nil)
+	if req.Stream == nil || *req.Stream {
+		c.Header("Content-Type", "application/x-ndjson")
+	} else {
+		c.Header("Content-Type", "application/json; charset=utf-8")
+	}
+
 	// Inject thinking parameter
 	if req.Options == nil {
 		req.Options = make(map[string]any)
 	}
-	// Note: We're keeping the original behavior of injecting into the body map for forwarding,
-	// but validating with the struct first.
-	// To forward, we unfortunately need to re-marshal including the injected fields if we want to rely on struct,
-	// or just work with the map.
-	// Given the original code worked with explicit body map modification, let's create a map from the struct
-	// to ensure we send exactly what we validated + our injections.
-
-	// However, we need to send "thinking" param which is not in standard Ollama request but is custom for Z.AI?
-	// The original code injected: bodyMap["thinking"] = map[string]string{"type": "enabled"}
-	// Let's replicate this.
 
 	bodyBytes, err := json.Marshal(req)
 	if err != nil {
@@ -127,15 +133,16 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 		return
 	}
 
-	// Create upstream request
+	// Create upstream request with context for cancellation handling
+	ctx := c.Request.Context()
 	upstreamURL := s.config.BaseURL + "/chat/completions"
-	upstreamReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", upstreamURL, bytes.NewReader(newBodyBytes))
+	upstreamReq, err := http.NewRequestWithContext(ctx, "POST", upstreamURL, bytes.NewReader(newBodyBytes))
 	if err != nil {
 		handleError(c, api.ErrInternalServer("Failed to create upstream request"))
 		return
 	}
 
-	// Set Content-Type
+	// Set Content-Type for upstream
 	upstreamReq.Header.Set("Content-Type", "application/json")
 
 	// Add Authorization header
@@ -146,33 +153,51 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 	// Execute request
 	resp, err := s.client.Do(upstreamReq)
 	if err != nil {
+		// Check for context cancellation (client disconnected)
+		if errors.Is(err, context.Canceled) {
+			slog.Debug("Client disconnected during upstream request")
+			c.JSON(499, gin.H{"error": "request canceled"})
+			return
+		}
 		handleError(c, api.ErrBadGateway("Failed to connect to upstream server"))
 		return
 	}
 	defer resp.Body.Close()
 
-	// Copy response headers
+	// Copy response headers (except Content-Type which we already set)
 	for key, values := range resp.Header {
-		for _, value := range values {
-			c.Writer.Header().Add(key, value)
+		if key != "Content-Type" {
+			for _, value := range values {
+				c.Writer.Header().Add(key, value)
+			}
 		}
 	}
 
 	// Set status code
 	c.Writer.WriteHeader(resp.StatusCode)
 
-	// Stream response body
-	if err := streamResponse(c, resp.Body); err != nil {
-		// Client may have disconnected, just log and return
+	// Stream response body with context awareness
+	if err := streamResponse(ctx, c, resp.Body); err != nil {
+		// Check if client disconnected
+		if errors.Is(err, context.Canceled) {
+			slog.Debug("Client disconnected during streaming")
+		}
 		return
 	}
 }
 
-// streamResponse streams the response body with SSE support
-func streamResponse(c *gin.Context, body io.ReadCloser) error {
+// streamResponse streams the response body with SSE support and context awareness
+func streamResponse(ctx context.Context, c *gin.Context, body io.ReadCloser) error {
 	buf := make([]byte, 32*1024) // 32KB buffer
 
 	for {
+		// Check if context is canceled before reading
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		n, err := body.Read(buf)
 		if n > 0 {
 			// Write chunk
