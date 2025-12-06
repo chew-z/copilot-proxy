@@ -1,0 +1,62 @@
+.DS_Store
+
+# Go artifacts
+go.sum
+bin/**
+*.exe
+*.test
+
+# Environment variables
+.env
+.env.local
+
+# Test files
+*_test.go
+test_*
+
+# Documentation files (project-specific)
+AGENTS.md
+GOLANG.md
+GODOC.md
+CODANNA.md
+
+# Reports and analysis
+reports/**
+.repomix/
+repomix.config.json
+repomix-output.xml
+
+# IDE and tool configurations
+.aider*
+.claude/**
+.codex/**
+.gemini/**
+.github/**
+.qwen/
+.vscode/**
+
+# MCP configuration
+.mcp.json
+
+.qwenignore
+
+# Codanna
+.codanna/**
+.codannaignore
+# local folder
+.fastembed_cache/**
+# link to global
+.fastembed_cache
+
+# Ephemeral hook-generated files (should not be tracked)
+.claude/session_summary.md
+.claude/compact_backups/
+.claude/deploy_backups/
+
+# Scripts
+run_format.sh
+run_lint.sh
+run_test.sh
+
+# User configuration
+~/.copilot-proxy/

@@ -1,0 +1,154 @@
+# Copilot Proxy
+
+A fast, single-binary proxy server that bridges local LLM tools (expecting Ollama/OpenAI APIs) to Z.AI GLM Coding PaaS.
+
+## Features
+
+- **Drop-in Ollama replacement** - Listens on port 11434 by default
+- **Single binary** - No external dependencies, easy to distribute
+- **SSE streaming support** - Real-time responses for chat completions
+- **Optimized HTTP client** - Connection pooling and keep-alive
+- **Graceful shutdown** - No dropped requests on restart
+- **Simple configuration** - Config file + environment variables
+
+## Quick Start
+
+### Build
+
+```bash
+make build
+```
+
+### Configure
+
+```bash
+# Set your API key
+./bin/copilot-proxy config set api_key YOUR_API_KEY_HERE
+
+# Optional: Set custom base URL
+./bin/copilot-proxy config set base_url https://api.z.ai
+```
+
+### Run
+
+```bash
+./bin/copilot-proxy serve
+```
+
+### Use with your IDE/tool
+
+Configure your tool to use:
+- **API**: `http://127.0.0.1:11434`
+- **Model**: `GLM-4-Plus` (or any supported model from the catalog)
+
+## Configuration
+
+### Configuration Precedence
+
+1. **Environment variables** (highest priority)
+2. **Config file** (`~/.copilot-proxy/config.json`)
+3. **Defaults** (lowest priority)
+
+### Environment Variables
+
+- `ZAI_API_KEY`, `ZAI_CODING_API_KEY`, or `GLM_API_KEY` - Your API key
+- `ZAI_BASE_URL` - Base URL for Z.AI API (default: `https://api.z.ai`)
+- `ZAI_HOST` - Host to bind server to (default: `127.0.0.1`)
+- `ZAI_PORT` - Port to listen on (default: `11434`)
+
+### CLI Commands
+
+```bash
+# Start the server
+copilot-proxy serve
+
+# Set configuration
+copilot-proxy config set api_key YOUR_KEY
+copilot-proxy config set base_url https://api.z.ai
+copilot-proxy config set host 127.0.0.1
+copilot-proxy config set port 11434
+
+# Get configuration
+copilot-proxy config get api_key
+copilot-proxy config get base_url
+```
+
+## Supported Models
+
+The proxy returns a static catalog of supported Z.AI models:
+
+- GLM-4-Plus
+- GLM-4-Air
+- GLM-4-6
+- GLM-4-5
+- GLM-4-4
+- GLM-4-3
+- GLM-4-2
+- GLM-4-1
+- GLM-4
+- GLM-3-Turbo
+
+## API Endpoints
+
+### Model Discovery
+- `GET /api/tags` - Returns model catalog
+- `GET /api/list` - Alias for `/api/tags`
+- `POST /api/show` - Returns dummy model metadata
+
+### Chat Completions
+- `POST /v1/chat/completions` - Proxies to Z.AI Coding PaaS
+
+## Development
+
+### Build
+
+```bash
+make build        # Build binary
+make install      # Install to $GOPATH/bin
+make test         # Run tests
+make lint         # Run linter
+make format       # Format code
+make clean        # Clean build artifacts
+```
+
+### Project Structure
+
+```
+copilot-proxy/
+├── main.go                    # Entry point with godotenv autoload
+├── cmd/                       # CLI commands
+│   ├── root.go               # Cobra root command
+│   ├── serve.go              # Serve command
+│   └── config.go             # Config management
+├── internal/
+│   ├── config/               # Configuration management
+│   │   └── config.go         # Viper config struct
+│   ├── server/               # HTTP server
+│   │   ├── server.go         # Server setup
+│   │   └── handlers.go       # Route handlers
+│   └── models/               # Data models
+│       └── catalog.go        # Static model catalog
+├── go.mod                     # Go module
+└── Makefile                   # Build automation
+```
+
+## Technical Details
+
+### HTTP Client Optimization
+
+The proxy uses an optimized HTTP client with:
+- `MaxIdleConnsPerHost: 50` (vs default 2) for concurrent requests
+- `IdleConnTimeout: 90s` for connection reuse
+- `Timeout: 120s` for long-running streaming requests
+
+### Streaming Strategy
+
+Responses are streamed with a 32KB buffer and explicit flushes for SSE support, ensuring real-time delivery without buffering delays.
+
+### Graceful Shutdown
+
+The server handles SIGINT/SIGTERM signals and waits up to 30 seconds for in-flight requests to complete before shutting down.
+
+## License
+
+MIT
