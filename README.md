@@ -4,12 +4,12 @@ A fast, single-binary proxy server that bridges local LLM tools (expecting Ollam
 
 ## Features
 
-- **Drop-in Ollama replacement** - Listens on port 11434 by default
-- **Single binary** - No external dependencies, easy to distribute
-- **SSE streaming support** - Real-time responses for chat completions
-- **Optimized HTTP client** - Connection pooling and keep-alive
-- **Graceful shutdown** - No dropped requests on restart
-- **Simple configuration** - Config file + environment variables
+-   **Drop-in Ollama replacement** - Listens on port 11434 by default
+-   **Single binary** - No external dependencies, easy to distribute
+-   **SSE streaming support** - Real-time responses for chat completions
+-   **Optimized HTTP client** - Connection pooling and keep-alive
+-   **Graceful shutdown** - No dropped requests on restart
+-   **Simple configuration** - Config file + environment variables
 
 ## Quick Start
 
@@ -38,8 +38,9 @@ make build
 ### Use with your IDE/tool
 
 Configure your tool to use:
-- **API**: `http://127.0.0.1:11434`
-- **Model**: `GLM-4-Plus` (or any supported model from the catalog)
+
+-   **API**: `http://127.0.0.1:11434`
+-   **Model**: `GLM-4.6` (or any supported model from the catalog)
 
 ## Configuration
 
@@ -51,10 +52,10 @@ Configure your tool to use:
 
 ### Environment Variables
 
-- `ZAI_API_KEY`, `ZAI_CODING_API_KEY`, or `GLM_API_KEY` - Your API key
-- `ZAI_BASE_URL` - Base URL for Z.AI API (default: `https://api.z.ai`)
-- `ZAI_HOST` - Host to bind server to (default: `127.0.0.1`)
-- `ZAI_PORT` - Port to listen on (default: `11434`)
+-   `ZAI_API_KEY`, `ZAI_CODING_API_KEY`, or `GLM_API_KEY` - Your API key
+-   `ZAI_BASE_URL` - Base URL for Z.AI API (default: `https://api.z.ai`)
+-   `ZAI_HOST` - Host to bind server to (default: `127.0.0.1`)
+-   `ZAI_PORT` - Port to listen on (default: `11434`)
 
 ### CLI Commands
 
@@ -77,26 +78,38 @@ copilot-proxy config get base_url
 
 The proxy returns a static catalog of supported Z.AI models:
 
-- GLM-4-Plus
-- GLM-4-Air
-- GLM-4-6
-- GLM-4-5
-- GLM-4-4
-- GLM-4-3
-- GLM-4-2
-- GLM-4-1
-- GLM-4
-- GLM-3-Turbo
+-   GLM-4.6
+-   GLM-4.5
+-   GLM-4.5-Air
+
+## Capabilities
+
+The proxy fully supports and advertises the advanced capabilities of Z.AI GLM models:
+
+-   **Extended Context**:
+    -   `GLM-4.6`: **200k** token context window.
+    -   `GLM-4.5`: **128k** token context window.
+-   **Reasoning ("Thinking")**: Automatically enabled (`type: enabled`) for all chat completion requests, unlocking deep reasoning capabilities.
+-   **Vision**: All models advertise vision support for multimodal tasks.
 
 ## API Endpoints
 
 ### Model Discovery
-- `GET /api/tags` - Returns model catalog
-- `GET /api/list` - Alias for `/api/tags`
-- `POST /api/show` - Returns dummy model metadata
+
+To satisfy Ollama-compatible clients (like Copilot and various WebUIs), the proxy implements the full discovery API:
+
+-   `GET /api/tags` - Returns the complete model catalog with capabilities.
+-   `GET /api/list` - Alias for `/api/tags`.
+-   `GET /api/version` - Returns the API version (mimics Ollama versioning).
+-   `GET /api/ps` - Returns list of running models (empty for this proxy).
+-   `POST /api/show` - Returns detailed model metadata, including context length, parameters, and advertised capabilities (Tools, Vision). Accepts both `name` and `model` parameters.
 
 ### Chat Completions
-- `POST /v1/chat/completions` - Proxies to Z.AI Coding PaaS
+
+-   `POST /v1/chat/completions` - Standard OpenAI-compatible format, proxied to Z.AI Coding PaaS.
+-   `POST /api/chat` - Ollama-style chat endpoint (internally aliased to `v1/chat/completions` logic).
+
+> **Note**: The proxy automatically intercepts chat requests to inject `thinking: { "type": "enabled" }`, ensuring the model's reasoning capabilities are active.
 
 ## Development
 
@@ -137,9 +150,10 @@ copilot-proxy/
 ### HTTP Client Optimization
 
 The proxy uses an optimized HTTP client with:
-- `MaxIdleConnsPerHost: 50` (vs default 2) for concurrent requests
-- `IdleConnTimeout: 90s` for connection reuse
-- `Timeout: 120s` for long-running streaming requests
+
+-   `MaxIdleConnsPerHost: 50` (vs default 2) for concurrent requests
+-   `IdleConnTimeout: 90s` for connection reuse
+-   `Timeout: 120s` for long-running streaming requests
 
 ### Streaming Strategy
 

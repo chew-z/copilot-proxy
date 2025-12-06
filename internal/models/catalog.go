@@ -9,7 +9,7 @@ var Catalog = map[string]interface{}{
 			"modified_at":  "2024-01-01T00:00:00Z",
 			"size":         0,
 			"digest":       "GLM-4.6",
-			"capabilities": []string{"tools"},
+			"capabilities": []string{"tools", "vision"},
 			"details": map[string]interface{}{
 				"format":             "glm",
 				"family":             "glm",
@@ -24,7 +24,7 @@ var Catalog = map[string]interface{}{
 			"modified_at":  "2024-01-01T00:00:00Z",
 			"size":         0,
 			"digest":       "GLM-4.5",
-			"capabilities": []string{"tools"},
+			"capabilities": []string{"tools", "vision"},
 			"details": map[string]interface{}{
 				"format":             "glm",
 				"family":             "glm",
@@ -39,7 +39,7 @@ var Catalog = map[string]interface{}{
 			"modified_at":  "2024-01-01T00:00:00Z",
 			"size":         0,
 			"digest":       "GLM-4.5-Air",
-			"capabilities": []string{"tools"},
+			"capabilities": []string{"tools", "vision"},
 			"details": map[string]interface{}{
 				"format":             "glm",
 				"family":             "glm",
