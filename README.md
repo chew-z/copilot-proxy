@@ -2,7 +2,7 @@
 
 A fast, single-binary proxy server that bridges local LLM tools (expecting Ollama/OpenAI APIs) to Z.AI GLM Coding PaaS.
 
-**Version**: 0.1.0 (CLI) / 0.6.4 (API compatibility)
+**Version**: 0.2.0 (CLI) / 0.6.4 (API compatibility)
 
 ## Table of Contents
 
