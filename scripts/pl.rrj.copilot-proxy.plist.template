@@ -7,7 +7,8 @@
     
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/rrj/Projekty/Go/src/copilot-proxy/bin/copilot-proxy</string>
+        <!-- __GOBIN__ will be replaced during install -->
+        <string>__GOBIN__/copilot-proxy</string>
         <string>serve</string>
     </array>
     
@@ -29,14 +30,11 @@
     <key>StandardErrorPath</key>
     <string>/dev/null</string>
     
-    <key>WorkingDirectory</key>
-    <string>/Users/rrj/Projekty/Go/src/copilot-proxy</string>
-    
     <!-- Environment variables for the service -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>__GOBIN__:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <!-- Uncomment and set, or rely on config file / shell env -->
         <!-- <key>ZAI_API_KEY</key> -->
         <!-- <string>your-api-key-here</string> -->

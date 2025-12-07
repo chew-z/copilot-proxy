@@ -6,11 +6,13 @@ set -e
 
 SERVICE_ID="pl.rrj.copilot-proxy"
 PLIST_NAME="${SERVICE_ID}.plist"
-PLIST_SRC="$(dirname "$0")/${PLIST_NAME}"
+PLIST_TEMPLATE="$(dirname "$0")/${PLIST_NAME}.template"
 PLIST_DEST="${HOME}/Library/LaunchAgents/${PLIST_NAME}"
-PID_FILE="${TMPDIR}copilot-proxy.pid"
 LOG_FILE="${TMPDIR}copilot-proxy.log"
 HEALTH_URL="http://127.0.0.1:11434/healthz"
+
+# Determine GOBIN path
+GOBIN_PATH="${GOBIN:-${GOPATH:-$HOME/go}/bin}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -38,24 +40,29 @@ check_installed() {
 }
 
 cmd_install() {
-    if [ ! -f "$PLIST_SRC" ]; then
-        print_error "Plist file not found: $PLIST_SRC"
+    if [ ! -f "$PLIST_TEMPLATE" ]; then
+        print_error "Plist template not found: $PLIST_TEMPLATE"
+        exit 1
+    fi
+    
+    # Check for installed binary in GOBIN
+    BINARY_PATH="${GOBIN_PATH}/copilot-proxy"
+    if [ ! -f "$BINARY_PATH" ]; then
+        print_error "Binary not found at $BINARY_PATH"
+        print_error "Run 'make install' first to install the binary"
         exit 1
     fi
     
     # Create LaunchAgents directory if it doesn't exist
     mkdir -p "${HOME}/Library/LaunchAgents"
     
-    # Copy plist to LaunchAgents
-    cp "$PLIST_SRC" "$PLIST_DEST"
-    print_status "Installed plist to $PLIST_DEST"
+    # Generate plist from template, substituting __GOBIN__ with actual path
+    sed "s|__GOBIN__|${GOBIN_PATH}|g" "$PLIST_TEMPLATE" > "$PLIST_DEST"
     
-    # Ensure the binary exists
-    BINARY_PATH="$(dirname "$0")/../bin/copilot-proxy"
-    if [ ! -f "$BINARY_PATH" ]; then
-        print_warning "Binary not found at $BINARY_PATH"
-        print_warning "Run 'make build' before starting the service"
-    fi
+    print_status "Binary: $BINARY_PATH"
+    print_status "Installed plist to $PLIST_DEST"
+    echo ""
+    echo "To start the service, run: $0 start"
 }
 
 cmd_uninstall() {

@@ -106,25 +106,25 @@ copilot-proxy config get base_url
 
 ## Running as a Service
 
-The proxy includes launchd integration for macOS.
+The proxy includes launchd integration for macOS. The install script automatically detects your `$GOBIN` path.
 
-### Install and Start
+### Quick Start
 
 ```bash
-# Install the launchd service
-./scripts/copilot-proxy-ctl.sh install
-
-# Start the service
-./scripts/copilot-proxy-ctl.sh start
+make install                              # Install binary to $GOBIN
+./scripts/copilot-proxy-ctl.sh install    # Install launchd service
+./scripts/copilot-proxy-ctl.sh start      # Start the service
 ```
 
 ### Control Commands
 
 ```bash
-./scripts/copilot-proxy-ctl.sh status   # Check status + health
-./scripts/copilot-proxy-ctl.sh stop     # Stop the service
-./scripts/copilot-proxy-ctl.sh restart  # Restart
-./scripts/copilot-proxy-ctl.sh logs     # Tail log file
+./scripts/copilot-proxy-ctl.sh install   # Install service (uses your $GOBIN)
+./scripts/copilot-proxy-ctl.sh start     # Start the service
+./scripts/copilot-proxy-ctl.sh status    # Check status + health
+./scripts/copilot-proxy-ctl.sh stop      # Stop the service
+./scripts/copilot-proxy-ctl.sh restart   # Restart
+./scripts/copilot-proxy-ctl.sh logs      # Tail log file
 ./scripts/copilot-proxy-ctl.sh uninstall # Remove service
 ```
 
