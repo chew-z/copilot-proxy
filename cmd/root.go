@@ -14,7 +14,7 @@ var rootCmd = &cobra.Command{
 locally and forwards requests to Z.AI Coding PaaS with minimal overhead.
 
 It acts as a drop-in replacement for Ollama, listening on port 11434 by default.`,
-	Version: "0.2.0",
+	Version: "0.3.0",
 }
 
 func Execute() {
