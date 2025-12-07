@@ -122,13 +122,18 @@ func Save(cfg *Config) error {
 	return nil
 }
 
-// getConfigDir returns the configuration directory path
+// getConfigDir returns the configuration directory path (XDG-compliant)
 func getConfigDir() (string, error) {
+	// Check XDG_CONFIG_HOME first
+	if configHome := os.Getenv("XDG_CONFIG_HOME"); configHome != "" {
+		return filepath.Join(configHome, "copilot-proxy"), nil
+	}
+	// Default to ~/.config/copilot-proxy
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".copilot-proxy"), nil
+	return filepath.Join(homeDir, ".config", "copilot-proxy"), nil
 }
 
 // getAPIKeyFromEnv checks multiple environment variable names for API key

@@ -69,7 +69,7 @@ Configure your tool to use:
 ### Configuration Precedence
 
 1. **Environment variables** (highest priority)
-2. **Config file** (`~/.copilot-proxy/config.json`)
+2. **Config file** (`~/.config/copilot-proxy/config.json`)
 3. **Defaults** (lowest priority)
 
 ### Environment Variables

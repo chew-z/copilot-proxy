@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -30,16 +31,31 @@ func init() {
 	serveCmd.Flags().BoolP("verbose", "v", false, "Enable terminal output (default: quiet, logs to file only)")
 }
 
+// setupEarlyLogging sets up file logging before server initialization
+// so that early errors (like missing API key) are logged to file
+func setupEarlyLogging() {
+	logPath := filepath.Join(os.TempDir(), "copilot-proxy.log")
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return // Fall back to stdout
+	}
+	log.SetOutput(logFile)
+	log.SetFlags(log.LstdFlags)
+}
+
 func runServe(cmd *cobra.Command, args []string) {
+	// Setup early file logging so errors are captured
+	setupEarlyLogging()
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Fatalf("FATAL: Failed to load configuration: %v", err)
 	}
 
 	// Check if API key is configured
 	if cfg.APIKey == "" {
-		log.Fatal("API key is not configured. Please run 'copilot-proxy config set api_key YOUR_API_KEY' or set ZAI_API_KEY environment variable.")
+		log.Fatal("FATAL: API key is not configured. Please run 'copilot-proxy config set api_key YOUR_API_KEY' or set ZAI_API_KEY environment variable. Config file location: ~/.config/copilot-proxy/config.json")
 	}
 
 	// Get host and port from flags (highest precedence)
