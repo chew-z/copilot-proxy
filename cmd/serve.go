@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -31,21 +32,9 @@ func init() {
 	serveCmd.Flags().BoolP("verbose", "v", false, "Enable terminal output (default: quiet, logs to file only)")
 }
 
-// setupEarlyLogging sets up file logging before server initialization
-// so that early errors (like missing API key) are logged to file
-func setupEarlyLogging() {
-	logPath := filepath.Join(os.TempDir(), "copilot-proxy.log")
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return // Fall back to stdout
-	}
-	log.SetOutput(logFile)
-	log.SetFlags(log.LstdFlags)
-}
-
 func runServe(cmd *cobra.Command, args []string) {
-	// Setup early file logging so errors are captured
-	setupEarlyLogging()
+	// Error channel to capture startup errors from goroutine
+	errChan := make(chan error, 1)
 
 	// Load configuration
 	cfg, err := config.Load()
@@ -109,17 +98,30 @@ func runServe(cmd *cobra.Command, args []string) {
 			log.Printf("Starting server on %s:%d", host, port)
 			log.Printf("Base URL: %s", cfg.BaseURL)
 		}
-		if err := srv.Start(); err != nil {
-			log.Fatalf("Server failed to start: %v", err)
+		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
+			// Send error to main goroutine instead of calling log.Fatalf
+			errChan <- fmt.Errorf("server failed to start: %w", err)
 		}
+		// Note: when server shuts down normally, it returns http.ErrServerClosed
+		// which we ignore, and this goroutine exits. The main goroutine waits on quit channel.
 	}()
 
-	// Wait for interrupt signal
+	// Wait for interrupt signal or startup error
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 
-	log.Println("Shutting down server...")
+	// Check for immediate startup errors with a small timeout
+	select {
+	case err := <-errChan:
+		// Server failed to start
+		log.Fatalf("FATAL: %v", err)
+	case <-time.After(100 * time.Millisecond):
+		// Server appears to have started successfully, wait for shutdown signal
+	}
+
+	// Now wait for shutdown signal
+	<-quit
+	log.Println("Received shutdown signal, shutting down server...")
 
 	// Create a deadline for graceful shutdown
 	ctx, cancel := server.CreateShutdownContext(30 * time.Second)
