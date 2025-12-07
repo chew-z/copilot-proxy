@@ -33,25 +33,41 @@ func NewServer(cfg *config.Config, host string, port int) *Server {
 	}
 
 	// Setup logging
-	if cfg.Debug {
-		// Log to file in $TMPDIR
-		logPath := filepath.Join(os.TempDir(), "copilot-proxy.log")
-		logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			slog.Error("Could not create log file", "path", logPath, "error", err)
-		} else {
-			// Write to both file and stdout
+	logPath := filepath.Join(os.TempDir(), "copilot-proxy.log")
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		slog.Error("Could not create log file", "path", logPath, "error", err)
+	} else {
+		// Determine log level based on debug mode
+		logLevel := slog.LevelInfo
+		if cfg.Debug {
+			logLevel = slog.LevelDebug
+		}
+
+		// Setup writers based on verbose mode (default: quiet, log to file only)
+		if cfg.Verbose {
+			// Verbose mode: log to both file and stdout
 			gin.DefaultWriter = io.MultiWriter(logFile, os.Stdout)
 			gin.DefaultErrorWriter = io.MultiWriter(logFile, os.Stderr)
 
-			// Setup slog
 			handler := slog.NewTextHandler(io.MultiWriter(logFile, os.Stdout), &slog.HandlerOptions{
-				Level: slog.LevelDebug,
+				Level: logLevel,
 			})
 			slog.SetDefault(slog.New(handler))
 			slog.Info("Logging initialized", "path", logPath)
+		} else {
+			// Quiet mode (default): log to file only
+			gin.DefaultWriter = logFile
+			gin.DefaultErrorWriter = logFile
+
+			handler := slog.NewTextHandler(logFile, &slog.HandlerOptions{
+				Level: logLevel,
+			})
+			slog.SetDefault(slog.New(handler))
 		}
-	} else {
+	}
+
+	if !cfg.Debug {
 		// In release mode, disable console color for cleaner logs
 		gin.DisableConsoleColor()
 	}

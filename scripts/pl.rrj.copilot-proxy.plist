@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>pl.rrj.copilot-proxy</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/rrj/Projekty/Go/src/copilot-proxy/bin/copilot-proxy</string>
+        <string>serve</string>
+    </array>
+    
+    <!-- Start automatically at login -->
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <!-- Restart if it crashes (but not on clean exit) -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    
+    <!-- Discard stdout/stderr - app has its own logging to $TMPDIR -->
+    <key>StandardOutPath</key>
+    <string>/dev/null</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/dev/null</string>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/rrj/Projekty/Go/src/copilot-proxy</string>
+    
+    <!-- Environment variables for the service -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <!-- Uncomment and set, or rely on config file / shell env -->
+        <!-- <key>ZAI_API_KEY</key> -->
+        <!-- <string>your-api-key-here</string> -->
+        <!-- <key>ZAI_BASE_URL</key> -->
+        <!-- <string>https://api.z.ai/api/coding/paas/v4</string> -->
+        <!-- <key>ZAI_HOST</key> -->
+        <!-- <string>127.0.0.1</string> -->
+        <!-- <key>ZAI_PORT</key> -->
+        <!-- <string>11434</string> -->
+    </dict>
+    
+    <!-- Throttle restarts: wait 10 seconds before restarting after crash -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>

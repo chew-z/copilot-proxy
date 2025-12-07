@@ -15,6 +15,7 @@ type Config struct {
 	Host    string `mapstructure:"host"`
 	Port    int    `mapstructure:"port"`
 	Debug   bool   `mapstructure:"debug"`
+	Verbose bool   `mapstructure:"verbose"` // Enable terminal output (default: quiet, logs to file only)
 }
 
 // DefaultConfig returns the default configuration

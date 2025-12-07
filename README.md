@@ -6,15 +6,16 @@ A fast, single-binary proxy server that bridges local LLM tools (expecting Ollam
 
 ## Table of Contents
 
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Supported Models](#supported-models)
-- [Capabilities](#capabilities)
-- [API Endpoints](#api-endpoints)
-- [Development](#development)
-- [Technical Details](#technical-details)
-- [License](#license)
+-   [Features](#features)
+-   [Quick Start](#quick-start)
+-   [Configuration](#configuration)
+-   [Running as a Service](#running-as-a-service)
+-   [Supported Models](#supported-models)
+-   [Capabilities](#capabilities)
+-   [API Endpoints](#api-endpoints)
+-   [Development](#development)
+-   [Technical Details](#technical-details)
+-   [License](#license)
 
 ## Features
 
@@ -46,7 +47,14 @@ make build
 ### Run
 
 ```bash
+# Default: quiet mode (logs to $TMPDIR/copilot-proxy.log)
 ./bin/copilot-proxy serve
+
+# Verbose: see output in terminal
+./bin/copilot-proxy serve --verbose
+
+# Debug: detailed logging
+./bin/copilot-proxy serve --debug --verbose
 ```
 
 ### Use with your IDE/tool
@@ -75,11 +83,14 @@ Configure your tool to use:
 ### CLI Commands
 
 ```bash
-# Start the server
+# Start the server (quiet by default)
 copilot-proxy serve
 
-# Start with custom host/port/debug
-copilot-proxy serve --host 0.0.0.0 --port 8080 --debug
+# Start with terminal output
+copilot-proxy serve --verbose
+
+# Start with custom host/port and debug logging
+copilot-proxy serve --host 0.0.0.0 --port 8080 --debug --verbose
 
 # Set configuration
 copilot-proxy config set api_key YOUR_KEY
@@ -92,6 +103,34 @@ copilot-proxy config set debug true
 copilot-proxy config get api_key
 copilot-proxy config get base_url
 ```
+
+## Running as a Service
+
+The proxy includes launchd integration for macOS.
+
+### Install and Start
+
+```bash
+# Install the launchd service
+./scripts/copilot-proxy-ctl.sh install
+
+# Start the service
+./scripts/copilot-proxy-ctl.sh start
+```
+
+### Control Commands
+
+```bash
+./scripts/copilot-proxy-ctl.sh status   # Check status + health
+./scripts/copilot-proxy-ctl.sh stop     # Stop the service
+./scripts/copilot-proxy-ctl.sh restart  # Restart
+./scripts/copilot-proxy-ctl.sh logs     # Tail log file
+./scripts/copilot-proxy-ctl.sh uninstall # Remove service
+```
+
+### Service Configuration
+
+The service starts automatically at login and restarts on crash. To customize environment variables, edit `~/Library/LaunchAgents/pl.rrj.copilot-proxy.plist` after installation.
 
 ## Supported Models
 
@@ -196,9 +235,11 @@ Responses are streamed with a 32KB buffer and explicit flushes for SSE support, 
 
 The server handles SIGINT/SIGTERM signals and waits up to 30 seconds for in-flight requests to complete before shutting down.
 
-### Debug Logging
+### Logging
 
-When debug mode is enabled (via `ZAI_DEBUG=true` or `copilot-proxy config set debug true`), the proxy logs detailed information to both console and a log file at `$TMPDIR/copilot-proxy.log`. This includes request/response details and internal operations for troubleshooting.
+-   **Default (quiet)**: Logs to `$TMPDIR/copilot-proxy.log` only
+-   **Verbose mode** (`-v`): Also outputs to terminal
+-   **Debug mode** (`-d`): Sets log level to DEBUG for detailed information
 
 ## License
 

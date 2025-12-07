@@ -27,6 +27,7 @@ func init() {
 	serveCmd.Flags().StringP("host", "H", "127.0.0.1", "Host to bind the server to")
 	serveCmd.Flags().IntP("port", "p", 11434, "Port to listen on")
 	serveCmd.Flags().BoolP("debug", "d", false, "Enable debug mode (verbose logging)")
+	serveCmd.Flags().BoolP("verbose", "v", false, "Enable terminal output (default: quiet, logs to file only)")
 }
 
 func runServe(cmd *cobra.Command, args []string) {
@@ -74,13 +75,24 @@ func runServe(cmd *cobra.Command, args []string) {
 		cfg.Debug = true
 	}
 
+	// Get verbose flag (CLI flag overrides config)
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		log.Fatalf("Failed to get verbose flag: %v", err)
+	}
+	if verbose {
+		cfg.Verbose = true
+	}
+
 	// Create and start server
 	srv := server.NewServer(cfg, host, port)
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("Starting server on %s:%d", host, port)
-		log.Printf("Base URL: %s", cfg.BaseURL)
+		if cfg.Verbose {
+			log.Printf("Starting server on %s:%d", host, port)
+			log.Printf("Base URL: %s", cfg.BaseURL)
+		}
 		if err := srv.Start(); err != nil {
 			log.Fatalf("Server failed to start: %v", err)
 		}
