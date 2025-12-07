@@ -114,14 +114,15 @@ func runServe(cmd *cobra.Command, args []string) {
 	select {
 	case err := <-errChan:
 		// Server failed to start
-		log.Fatalf("FATAL: %v", err)
+		log.Fatalf("FATAL: Server failed to start: %v", err)
 	case <-time.After(100 * time.Millisecond):
-		// Server appears to have started successfully, wait for shutdown signal
+		// Server appears to have started successfully
+		log.Printf("Server started successfully on %s:%d", host, port)
 	}
 
 	// Now wait for shutdown signal
 	<-quit
-	log.Println("Received shutdown signal, shutting down server...")
+	log.Printf("Shutting down server (PID: %d)...", os.Getpid())
 
 	// Create a deadline for graceful shutdown
 	ctx, cancel := server.CreateShutdownContext(30 * time.Second)
@@ -129,8 +130,8 @@ func runServe(cmd *cobra.Command, args []string) {
 
 	// Gracefully shutdown the server
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Fatalf("ERROR: Server shutdown failed: %v", err)
 	}
 
-	log.Println("Server exited gracefully")
+	log.Printf("Server shutdown complete (PID: %d)", os.Getpid())
 }
