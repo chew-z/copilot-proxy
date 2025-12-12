@@ -86,20 +86,56 @@ func (s *Server) handleShow(c *gin.Context) {
 
 // handleChatCompletions proxies requests to Z.AI API
 func (s *Server) handleChatCompletions(c *gin.Context) {
-	// Parse request as a map to preserve all fields (e.g., tools, tool_choice)
-	// that might be missing from our strict struct definition
-	var bodyMap map[string]any
-	if err := c.ShouldBindJSON(&bodyMap); err != nil {
+	// Read the raw request body first
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		handleError(c, api.ErrBadRequest("Failed to read request body"))
+		return
+	}
+
+	// First, validate with the strict struct to ensure required fields are present
+	var req api.ChatRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
 		handleError(c, api.ErrBadRequest("Invalid request: "+err.Error()))
 		return
 	}
 
-	// Validate model exists in catalog
-	modelName, _ := bodyMap["model"].(string)
-	if !models.IsValidModel(modelName) {
-		handleError(c, api.ErrNotFound(fmt.Sprintf("model '%s' not found", modelName)))
+	// Perform manual validation since json.Unmarshal doesn't check binding tags
+	if req.Model == "" {
+		handleError(c, api.ErrBadRequest("Error:Field validation for 'Model' failed on the 'required' tag"))
 		return
 	}
+	if len(req.Messages) == 0 {
+		handleError(c, api.ErrBadRequest("Error:Field validation for 'Messages' failed on the 'required' tag"))
+		return
+	}
+	for i, msg := range req.Messages {
+		if msg.Role == "" {
+			handleError(c, api.ErrBadRequest(fmt.Sprintf("Error:Field validation for 'Role' failed on the 'required' tag at message %d", i)))
+			return
+		}
+		validRoles := map[string]bool{"system": true, "user": true, "assistant": true, "tool": true}
+		if !validRoles[msg.Role] {
+			handleError(c, api.ErrBadRequest(fmt.Sprintf("Error:Field validation for 'Role' failed on the 'oneof' tag at message %d", i)))
+			return
+		}
+	}
+
+	// Validate model exists in catalog
+	if !models.IsValidModel(req.Model) {
+		handleError(c, api.ErrNotFound(fmt.Sprintf("model '%s' not found", req.Model)))
+		return
+	}
+
+	// Now parse as map to preserve all fields (e.g., tools, tool_choice, etc.)
+	var bodyMap map[string]any
+	if err := json.Unmarshal(bodyBytes, &bodyMap); err != nil {
+		handleError(c, api.ErrBadRequest("Invalid request: "+err.Error()))
+		return
+	}
+
+	// Use the validated model name
+	modelName := req.Model
 
 	// Enable deep thinking for GLM models
 	bodyMap["thinking"] = map[string]string{
