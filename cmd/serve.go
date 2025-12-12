@@ -33,9 +33,22 @@ func init() {
 }
 
 func runServe(cmd *cobra.Command, args []string) {
-	// Error channel to capture startup errors from goroutine
-	errChan := make(chan error, 1)
+	// Load and validate configuration
+	cfg := loadAndValidateConfig(cmd)
 
+	// Get server configuration
+	host, port := getServerConfig(cmd, cfg)
+
+	// Create and start server
+	srv := server.NewServer(cfg, host, port)
+	startServer(srv, cfg, host, port)
+
+	// Wait for shutdown signal and gracefully shutdown
+	waitForShutdown(srv)
+}
+
+// loadAndValidateConfig loads configuration and validates required settings
+func loadAndValidateConfig(cmd *cobra.Command) *config.Config {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -44,9 +57,41 @@ func runServe(cmd *cobra.Command, args []string) {
 
 	// Check if API key is configured
 	if cfg.APIKey == "" {
-		log.Fatal("FATAL: API key is not configured. Please run 'copilot-proxy config set api_key YOUR_API_KEY' or set ZAI_API_KEY environment variable. Config file location: ~/.config/copilot-proxy/config.json")
+		log.Fatal("FATAL: API key is not configured. " +
+			"Please run 'copilot-proxy config set api_key YOUR_API_KEY' " +
+			"or set ZAI_API_KEY environment variable. " +
+			"Config file location: ~/.config/copilot-proxy/config.json")
 	}
 
+	// Apply CLI flag overrides
+	applyCLIOverrides(cmd, cfg)
+
+	return cfg
+}
+
+// applyCLIOverrides applies CLI flag values to configuration
+func applyCLIOverrides(cmd *cobra.Command, cfg *config.Config) {
+	// Get debug flag (CLI flag overrides config)
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		log.Fatalf("Failed to get debug flag: %v", err)
+	}
+	if debug {
+		cfg.Debug = true
+	}
+
+	// Get verbose flag (CLI flag overrides config)
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		log.Fatalf("Failed to get verbose flag: %v", err)
+	}
+	if verbose {
+		cfg.Verbose = true
+	}
+}
+
+// getServerConfig extracts host and port from CLI flags with config fallback
+func getServerConfig(cmd *cobra.Command, cfg *config.Config) (string, int) {
 	// Get host and port from flags (highest precedence)
 	host, err := cmd.Flags().GetString("host")
 	if err != nil {
@@ -71,26 +116,13 @@ func runServe(cmd *cobra.Command, args []string) {
 		port = cfg.Port
 	}
 
-	// Get debug flag (CLI flag overrides config)
-	debug, err := cmd.Flags().GetBool("debug")
-	if err != nil {
-		log.Fatalf("Failed to get debug flag: %v", err)
-	}
-	if debug {
-		cfg.Debug = true
-	}
+	return host, port
+}
 
-	// Get verbose flag (CLI flag overrides config)
-	verbose, err := cmd.Flags().GetBool("verbose")
-	if err != nil {
-		log.Fatalf("Failed to get verbose flag: %v", err)
-	}
-	if verbose {
-		cfg.Verbose = true
-	}
-
-	// Create and start server
-	srv := server.NewServer(cfg, host, port)
+// startServer starts the server in a goroutine and handles startup errors
+func startServer(srv *server.Server, cfg *config.Config, host string, port int) {
+	// Error channel to capture startup errors from goroutine
+	errChan := make(chan error, 1)
 
 	// Start server in a goroutine
 	go func() {
@@ -119,6 +151,13 @@ func runServe(cmd *cobra.Command, args []string) {
 		// Server appears to have started successfully
 		log.Printf("Server started successfully on %s:%d", host, port)
 	}
+}
+
+// waitForShutdown waits for shutdown signal and gracefully shuts down the server
+func waitForShutdown(srv *server.Server) {
+	// Wait for interrupt signal or startup error
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Now wait for shutdown signal
 	<-quit

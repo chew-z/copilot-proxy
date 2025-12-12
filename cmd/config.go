@@ -85,12 +85,13 @@ func runConfigSet(cmd *cobra.Command, args []string) {
 		}
 		cfg.Port = portInt
 	case "debug":
-		// Parse boolean
-		if value == "true" || value == "1" {
+		// Parse boolean using tagged switch
+		switch value {
+		case "true", "1":
 			cfg.Debug = true
-		} else if value == "false" || value == "0" {
+		case "false", "0":
 			cfg.Debug = false
-		} else {
+		default:
 			log.Fatalf("Invalid debug value: %s. Must be true or false.", value)
 		}
 	}
