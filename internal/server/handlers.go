@@ -101,8 +101,19 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 		return
 	}
 
+	// Enable deep thinking for GLM models
 	bodyMap["thinking"] = map[string]string{
 		"type": "enabled",
+	}
+
+	// Auto-enable tool_stream for GLM-4.6 when tools are present and streaming is enabled
+	// This enables real-time streaming of tool call parameters (GLM-4.6 exclusive feature)
+	if modelName == "GLM-4.6" {
+		_, hasTools := bodyMap["tools"]
+		stream, _ := bodyMap["stream"].(bool)
+		if hasTools && stream {
+			bodyMap["tool_stream"] = true
+		}
 	}
 
 	newBodyBytes, err := json.Marshal(bodyMap)
