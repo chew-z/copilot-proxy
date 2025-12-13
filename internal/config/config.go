@@ -56,10 +56,8 @@ func Load() (*Config, error) {
 	v.SetEnvPrefix("ZAI")
 	v.AutomaticEnv()
 
-	// Bind specific environment variables
+	// Bind specific environment variables (no duplicates!)
 	_ = v.BindEnv("api_key", "ZAI_API_KEY")
-	_ = v.BindEnv("api_key", "ZAI_CODING_API_KEY")
-	_ = v.BindEnv("api_key", "GLM_API_KEY")
 	_ = v.BindEnv("base_url", "ZAI_BASE_URL")
 	_ = v.BindEnv("host", "ZAI_HOST")
 	_ = v.BindEnv("port", "ZAI_PORT")

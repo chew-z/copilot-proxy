@@ -1,64 +1,91 @@
 package models
 
-// Catalog is the static model catalog returned by the proxy
-var Catalog = map[string]interface{}{
-	"models": []map[string]interface{}{
+import "strings"
+
+// Model represents a single model in the catalog
+type Model struct {
+	Name         string       `json:"name"`
+	Model        string       `json:"model"`
+	ModifiedAt   string       `json:"modified_at"`
+	Size         int          `json:"size"`
+	Digest       string       `json:"digest"`
+	Capabilities []string     `json:"capabilities"`
+	Details      ModelDetails `json:"details"`
+	ContextLen   int          `json:"-"` // Internal use, not serialized
+}
+
+// ModelDetails contains model metadata
+type ModelDetails struct {
+	Format            string   `json:"format"`
+	Family            string   `json:"family"`
+	Families          []string `json:"families"`
+	ParameterSize     string   `json:"parameter_size"`
+	QuantizationLevel string   `json:"quantization_level"`
+}
+
+// ModelCatalog represents the complete model catalog
+type ModelCatalog struct {
+	Models []Model `json:"models"`
+}
+
+// Typed catalog with context lengths included
+var Catalog = ModelCatalog{
+	Models: []Model{
 		{
-			"name":         "GLM-4.6",
-			"model":        "GLM-4.6",
-			"modified_at":  "2024-01-01T00:00:00Z",
-			"size":         0,
-			"digest":       "GLM-4.6",
-			"capabilities": []string{"tools", "vision"},
-			"details": map[string]interface{}{
-				"format":             "glm",
-				"family":             "glm",
-				"families":           []string{"glm"},
-				"parameter_size":     "cloud",
-				"quantization_level": "cloud",
+			Name:         "GLM-4.6",
+			Model:        "GLM-4.6",
+			ModifiedAt:   "2024-01-01T00:00:00Z",
+			Size:         0,
+			Digest:       "GLM-4.6",
+			Capabilities: []string{"tools", "vision"},
+			ContextLen:   200000,
+			Details: ModelDetails{
+				Format:            "glm",
+				Family:            "glm",
+				Families:          []string{"glm"},
+				ParameterSize:     "cloud",
+				QuantizationLevel: "cloud",
 			},
 		},
 		{
-			"name":         "GLM-4.5",
-			"model":        "GLM-4.5",
-			"modified_at":  "2024-01-01T00:00:00Z",
-			"size":         0,
-			"digest":       "GLM-4.5",
-			"capabilities": []string{"tools", "vision"},
-			"details": map[string]interface{}{
-				"format":             "glm",
-				"family":             "glm",
-				"families":           []string{"glm"},
-				"parameter_size":     "cloud",
-				"quantization_level": "cloud",
+			Name:         "GLM-4.5",
+			Model:        "GLM-4.5",
+			ModifiedAt:   "2024-01-01T00:00:00Z",
+			Size:         0,
+			Digest:       "GLM-4.5",
+			Capabilities: []string{"tools", "vision"},
+			ContextLen:   128000,
+			Details: ModelDetails{
+				Format:            "glm",
+				Family:            "glm",
+				Families:          []string{"glm"},
+				ParameterSize:     "cloud",
+				QuantizationLevel: "cloud",
 			},
 		},
 		{
-			"name":         "GLM-4.5-Air",
-			"model":        "GLM-4.5-Air",
-			"modified_at":  "2024-01-01T00:00:00Z",
-			"size":         0,
-			"digest":       "GLM-4.5-Air",
-			"capabilities": []string{"tools", "vision"},
-			"details": map[string]interface{}{
-				"format":             "glm",
-				"family":             "glm",
-				"families":           []string{"glm"},
-				"parameter_size":     "cloud",
-				"quantization_level": "cloud",
+			Name:         "GLM-4.5-Air",
+			Model:        "GLM-4.5-Air",
+			ModifiedAt:   "2024-01-01T00:00:00Z",
+			Size:         0,
+			Digest:       "GLM-4.5-Air",
+			Capabilities: []string{"tools", "vision"},
+			ContextLen:   128000,
+			Details: ModelDetails{
+				Format:            "glm",
+				Family:            "glm",
+				Families:          []string{"glm"},
+				ParameterSize:     "cloud",
+				QuantizationLevel: "cloud",
 			},
 		},
 	},
 }
 
-// IsValidModel checks if a model name exists in the catalog
+// IsValidModel checks if a model name exists in the catalog (case-insensitive)
 func IsValidModel(name string) bool {
-	models, ok := Catalog["models"].([]map[string]interface{})
-	if !ok {
-		return false
-	}
-	for _, m := range models {
-		if m["name"] == name || m["model"] == name {
+	for _, m := range Catalog.Models {
+		if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Model, name) {
 			return true
 		}
 	}
@@ -67,8 +94,20 @@ func IsValidModel(name string) bool {
 
 // GetModelContextLength returns the context length for a model
 func GetModelContextLength(name string) int {
-	if name == "GLM-4.6" {
-		return 200000
+	for _, m := range Catalog.Models {
+		if m.Name == name {
+			return m.ContextLen
+		}
 	}
-	return 128000 // Default for GLM-4.5
+	return 128000 // Default for older models
+}
+
+// GetModel returns the full model struct if found
+func GetModel(name string) (*Model, bool) {
+	for _, m := range Catalog.Models {
+		if m.Name == name || m.Model == name {
+			return &m, true
+		}
+	}
+	return nil, false
 }

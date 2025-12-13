@@ -17,10 +17,11 @@ import (
 
 // Server represents the HTTP server
 type Server struct {
-	config *config.Config
-	router *gin.Engine
-	server *http.Server
-	client *http.Client
+	config  *config.Config
+	router  *gin.Engine
+	server  *http.Server
+	client  *http.Client
+	logFile *os.File
 }
 
 // NewServer creates a new server instance
@@ -94,10 +95,11 @@ func NewServer(cfg *config.Config, host string, port int) *Server {
 	// Create optimized HTTP client
 	client := &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConnsPerHost: 50, // Default is 2, way too low for concurrent requests
-			IdleConnTimeout:     90 * time.Second,
+			MaxIdleConnsPerHost:   50, // Default is 2, way too low for concurrent requests
+			IdleConnTimeout:       90 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second, // Timeout only for headers
 		},
-		Timeout: 120 * time.Second,
+		// No global Timeout - let context handle cancellation
 	}
 
 	// Create HTTP server
@@ -107,10 +109,11 @@ func NewServer(cfg *config.Config, host string, port int) *Server {
 	}
 
 	server := &Server{
-		config: cfg,
-		router: router,
-		server: srv,
-		client: client,
+		config:  cfg,
+		router:  router,
+		server:  srv,
+		client:  client,
+		logFile: logFile,
 	}
 
 	// Setup routes
@@ -126,6 +129,10 @@ func (s *Server) Start() error {
 
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown(ctx context.Context) error {
+	// Close log file if it was opened
+	if s.logFile != nil {
+		s.logFile.Close()
+	}
 	return s.server.Shutdown(ctx)
 }
 

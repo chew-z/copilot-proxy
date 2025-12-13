@@ -11,7 +11,20 @@ type ChatRequest struct {
 // Message represents a single chat message
 type Message struct {
 	Role    string `binding:"required,oneof=system user assistant tool" json:"role"`
-	Content string `json:"content"`
+	Content any    `json:"content"` // string or []ContentPart for vision models
+}
+
+// ContentPart represents a part of a message content (for vision models)
+type ContentPart struct {
+	Type     string    `json:"type"`
+	Text     string    `json:"text,omitempty"`
+	ImageURL *ImageURL `json:"image_url,omitempty"`
+}
+
+// ImageURL represents an image URL for vision models
+type ImageURL struct {
+	URL    string `json:"url"`
+	Detail string `json:"detail,omitempty"` // "auto", "low", or "high"
 }
 
 // ShowRequest for /api/show endpoint
