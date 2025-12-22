@@ -138,9 +138,13 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 		"type": "enabled",
 	}
 
-	// Auto-enable tool_stream for GLM-4.6 when tools are present and streaming is enabled
-	// This enables real-time streaming of tool call parameters (GLM-4.6 exclusive feature)
-	if model == "GLM-4.6" {
+	// Normalize model name to lowercase for upstream API (Z.AI expects lowercase)
+	canonicalModel := models.GetCanonicalModelName(model)
+	bodyMap["model"] = canonicalModel
+
+	// Auto-enable tool_stream for GLM-4.6 and GLM-4.7 when tools are present and streaming is enabled
+	// This enables real-time streaming of tool call parameters
+	if canonicalModel == "glm-4.6" || canonicalModel == "glm-4.7" {
 		_, hasTools := bodyMap["tools"]
 		stream, _ := bodyMap["stream"].(bool)
 		if hasTools && stream {

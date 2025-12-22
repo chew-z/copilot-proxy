@@ -136,6 +136,7 @@ The service starts automatically at login and restarts on crash. To customize en
 
 The proxy returns a static catalog of supported Z.AI models:
 
+-   GLM-4.7
 -   GLM-4.6
 -   GLM-4.5
 -   GLM-4.5-Air
@@ -145,8 +146,9 @@ The proxy returns a static catalog of supported Z.AI models:
 The proxy fully supports and advertises the advanced capabilities of Z.AI GLM models:
 
 -   **Extended Context**:
+    -   `GLM-4.7`: **200k** token context window.
     -   `GLM-4.6`: **200k** token context window.
-    -   `GLM-4.5`: **128k** token context window.
+    -   `GLM-4.5` and `GLM-4.5-Air`: **128k** token context window.
 -   **Reasoning ("Thinking")**: Automatically enabled (`type: enabled`) for all chat completion requests, unlocking deep reasoning capabilities.
 -   **Vision**: All models advertise vision support for multimodal tasks.
 
@@ -167,11 +169,11 @@ To satisfy Ollama-compatible clients (like Copilot and various WebUIs), the prox
 -   `POST /v1/chat/completions` - Standard OpenAI-compatible format, proxied to Z.AI Coding PaaS.
 -   `POST /api/chat` - Ollama-style chat endpoint (internally aliased to `v1/chat/completions` logic).
 
+> **Note**: The proxy automatically intercepts chat requests to inject `thinking: { "type": "enabled" }`, ensuring the model's reasoning capabilities are active. Model names are case-insensitive (e.g., `GLM-4.7`, `glm-4.7` both work), and are normalized to lowercase for the upstream API.
+
 ### Health Check
 
 -   `GET /healthz` - Simple health check endpoint returning `{"status": "ok"}`.
-
-> **Note**: The proxy automatically intercepts chat requests to inject `thinking: { "type": "enabled" }`, ensuring the model's reasoning capabilities are active.
 
 ## Development
 

@@ -87,9 +87,10 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
   - `/api/tags`, `/api/list`: Static model catalog
   - `/api/version`: API version information (currently 0.6.4)
   - `/api/ps`: Empty running models list
-  - `/api/show`: Model metadata with context lengths (200k for GLM-4.6, 128k for GLM-4.5)
+  - `/api/show`: Model metadata with context lengths (200k for GLM-4.7/4.6, 128k for GLM-4.5)
 - **Chat Completion Proxy**:
   - `/v1/chat/completions`, `/api/chat`: Request forwarding with model validation
+  - **Model name normalization**: Accepts uppercase/lowercase input, converts to lowercase for upstream API
   - **Automatic "thinking" injection** for enhanced reasoning
   - **Context-aware streaming** with 32KB buffer and SSE flushing
   - **Client disconnection detection** with proper context cancellation handling
@@ -105,14 +106,16 @@ Copilot Proxy is a lightweight, high-performance HTTP proxy server that acts as 
 - **Centralized error handling** with custom `StatusError` type
 - **Request validation** using Gin binding tags
 - **Consistent HTTP responses** across all handlers
-- **Static model definitions** for GLM-4.6, GLM-4.5, GLM-4.5-Air
+- **Static model definitions** for GLM-4.7, GLM-4.6, GLM-4.5, GLM-4.5-Air
 - **Capability advertising**: Tools, Vision, extended context
-- **Context length metadata**: 200k for GLM-4.6, 128k for GLM-4.5
+- **Context length metadata**: 200k for GLM-4.7 and GLM-4.6, 128k for GLM-4.5 and GLM-4.5-Air
 
 #### 7. Model Catalog (`internal/models/`)
-- **Static model definitions** for GLM-4.6, GLM-4.5, GLM-4.5-Air
+- **Static model definitions** for GLM-4.7, GLM-4.6, GLM-4.5, GLM-4.5-Air
 - **Capability advertising**: Tools, Vision, extended context
-- **Context length metadata**: 200k for GLM-4.6, 128k for GLM-4.5
+- **Context length metadata**: 200k for GLM-4.7 and GLM-4.6, 128k for GLM-4.5 and GLM-4.5-Air
+- **Model name normalization**: `GetCanonicalModelName()` ensures lowercase model names for upstream API
+- **Case-insensitive validation**: Accepts uppercase/lowercase input, normalizes to lowercase for API calls
 
 ## Data Flow
 

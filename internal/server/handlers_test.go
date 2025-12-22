@@ -284,6 +284,16 @@ func TestToolStreamAutoEnable(t *testing.T) {
 			expectToolStream: true,
 		},
 		{
+			name: "GLM-4.7 with tools and stream should enable tool_stream",
+			requestBody: `{
+				"model": "GLM-4.7",
+				"messages": [{"role": "user", "content": "test"}],
+				"stream": true,
+				"tools": [{"type": "function", "function": {"name": "test"}}]
+			}`,
+			expectToolStream: true,
+		},
+		{
 			name: "GLM-4.6 with tools but no stream should not enable tool_stream",
 			requestBody: `{
 				"model": "GLM-4.6",
@@ -293,9 +303,27 @@ func TestToolStreamAutoEnable(t *testing.T) {
 			expectToolStream: false,
 		},
 		{
+			name: "GLM-4.7 with tools but no stream should not enable tool_stream",
+			requestBody: `{
+				"model": "GLM-4.7",
+				"messages": [{"role": "user", "content": "test"}],
+				"tools": [{"type": "function", "function": {"name": "test"}}]
+			}`,
+			expectToolStream: false,
+		},
+		{
 			name: "GLM-4.6 with stream but no tools should not enable tool_stream",
 			requestBody: `{
 				"model": "GLM-4.6",
+				"messages": [{"role": "user", "content": "test"}],
+				"stream": true
+			}`,
+			expectToolStream: false,
+		},
+		{
+			name: "GLM-4.7 with stream but no tools should not enable tool_stream",
+			requestBody: `{
+				"model": "GLM-4.7",
 				"messages": [{"role": "user", "content": "test"}],
 				"stream": true
 			}`,

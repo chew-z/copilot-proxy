@@ -11,7 +11,9 @@ func TestIsValidModel(t *testing.T) {
 		{"GLM-4.6", true},
 		{"GLM-4.5", true},
 		{"GLM-4.5-Air", true},
+		{"GLM-4.7", true},
 		{"glm-4.6", true}, // case insensitive
+		{"glm-4.7", true}, // case insensitive
 		{"unknown-model", false},
 		{"", false},
 	}
@@ -35,6 +37,7 @@ func TestGetModelContextLength(t *testing.T) {
 		{"GLM-4.6", 200000},
 		{"GLM-4.5", 128000},
 		{"GLM-4.5-Air", 128000},
+		{"GLM-4.7", 200000},
 		{"unknown-model", 128000}, // default
 		{"", 128000},              // default
 	}
@@ -67,5 +70,32 @@ func TestGetModel(t *testing.T) {
 	_, found = GetModel("unknown-model")
 	if found {
 		t.Error("Expected not to find unknown-model")
+	}
+}
+
+// TestGetCanonicalModelName tests the GetCanonicalModelName function
+func TestGetCanonicalModelName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"Uppercase GLM-4.7", "GLM-4.7", "glm-4.7"},
+		{"Lowercase glm-4.7", "glm-4.7", "glm-4.7"},
+		{"Mixed case GLm-4.7", "GLm-4.7", "glm-4.7"},
+		{"Uppercase GLM-4.6", "GLM-4.6", "glm-4.6"},
+		{"Lowercase glm-4.6", "glm-4.6", "glm-4.6"},
+		{"Uppercase GLM-4.5", "GLM-4.5", "glm-4.5"},
+		{"Uppercase GLM-4.5-Air", "GLM-4.5-Air", "glm-4.5-air"},
+		{"Unknown model (returns as-is)", "unknown-model", "unknown-model"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetCanonicalModelName(tt.input)
+			if result != tt.expected {
+				t.Errorf("GetCanonicalModelName(%s) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
 	}
 }

@@ -32,11 +32,27 @@ type ModelCatalog struct {
 var Catalog = ModelCatalog{
 	Models: []Model{
 		{
+			Name:         "GLM-4.7",
+			Model:        "glm-4.7",
+			ModifiedAt:   "2025-01-01T00:00:00Z",
+			Size:         0,
+			Digest:       "glm-4.7",
+			Capabilities: []string{"tools", "vision"},
+			ContextLen:   200000,
+			Details: ModelDetails{
+				Format:            "glm",
+				Family:            "glm",
+				Families:          []string{"glm"},
+				ParameterSize:     "cloud",
+				QuantizationLevel: "cloud",
+			},
+		},
+		{
 			Name:         "GLM-4.6",
-			Model:        "GLM-4.6",
+			Model:        "glm-4.6",
 			ModifiedAt:   "2024-01-01T00:00:00Z",
 			Size:         0,
-			Digest:       "GLM-4.6",
+			Digest:       "glm-4.6",
 			Capabilities: []string{"tools", "vision"},
 			ContextLen:   200000,
 			Details: ModelDetails{
@@ -49,10 +65,10 @@ var Catalog = ModelCatalog{
 		},
 		{
 			Name:         "GLM-4.5",
-			Model:        "GLM-4.5",
+			Model:        "glm-4.5",
 			ModifiedAt:   "2024-01-01T00:00:00Z",
 			Size:         0,
-			Digest:       "GLM-4.5",
+			Digest:       "glm-4.5",
 			Capabilities: []string{"tools", "vision"},
 			ContextLen:   128000,
 			Details: ModelDetails{
@@ -65,10 +81,10 @@ var Catalog = ModelCatalog{
 		},
 		{
 			Name:         "GLM-4.5-Air",
-			Model:        "GLM-4.5-Air",
+			Model:        "glm-4.5-air",
 			ModifiedAt:   "2024-01-01T00:00:00Z",
 			Size:         0,
-			Digest:       "GLM-4.5-Air",
+			Digest:       "glm-4.5-air",
 			Capabilities: []string{"tools", "vision"},
 			ContextLen:   128000,
 			Details: ModelDetails{
@@ -110,4 +126,15 @@ func GetModel(name string) (*Model, bool) {
 		}
 	}
 	return nil, false
+}
+
+// GetCanonicalModelName returns the canonical (lowercase) model name for any input
+// This ensures the proxy sends the correct lowercase model name to the upstream API
+func GetCanonicalModelName(name string) string {
+	for _, m := range Catalog.Models {
+		if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Model, name) {
+			return m.Model // Return the lowercase Model field
+		}
+	}
+	return name // Return original if not found (shouldn't happen after validation)
 }
