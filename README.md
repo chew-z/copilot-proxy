@@ -62,7 +62,7 @@ make build
 Configure your tool to use:
 
 -   **API**: `http://127.0.0.1:11434`
--   **Model**: `GLM-4.6` (or any supported model from the catalog)
+-   **Model**: `GLM-4.7-Flash` (or any supported model from the catalog)
 
 ## Configuration
 
@@ -137,20 +137,17 @@ The service starts automatically at login and restarts on crash. To customize en
 The proxy returns a static catalog of supported Z.AI models:
 
 -   GLM-4.7
--   GLM-4.6
--   GLM-4.5
--   GLM-4.5-Air
+-   GLM-4.7-Flash (Free tier - 1 stream/concurrency)
+-   GLM-4.7-FlashX (High-speed paid variant)
 
 ## Capabilities
 
 The proxy fully supports and advertises the advanced capabilities of Z.AI GLM models:
 
 -   **Extended Context**:
-    -   `GLM-4.7`: **200k** token context window.
-    -   `GLM-4.6`: **200k** token context window.
-    -   `GLM-4.5` and `GLM-4.5-Air`: **128k** token context window.
+    -   All `GLM-4.7` family models: **200k** token context window.
 -   **Reasoning ("Thinking")**: Automatically enabled (`type: enabled`) for all chat completion requests, unlocking deep reasoning capabilities.
--   **Vision**: All models advertise vision support for multimodal tasks.
+-   **Tools**: All models support function calling and streaming tool outputs (`tool_stream`).
 
 ## API Endpoints
 

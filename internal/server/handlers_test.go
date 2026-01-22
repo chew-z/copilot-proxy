@@ -40,7 +40,7 @@ func TestHandleVersion(t *testing.T) {
 func TestHandleShow_DefaultModel(t *testing.T) {
 	s := setupTestServer()
 	w := httptest.NewRecorder()
-	// Empty body should default to GLM-4.6 or fallback
+	// Empty body should default to GLM-4.7-Flash or fallback
 	req, _ := http.NewRequest("POST", "/api/show", bytes.NewBufferString("{}"))
 	req.Header.Set("Content-Type", "application/json")
 	s.router.ServeHTTP(w, req)
@@ -85,7 +85,7 @@ func TestChatCompletions_Validation(t *testing.T) {
 		},
 		{
 			name:       "Invalid Role",
-			body:       `{"model":"GLM-4.6", "messages":[{"role":"invalid","content":"hi"}]}`,
+			body:       `{"model":"GLM-4.7-Flash", "messages":[{"role":"invalid","content":"hi"}]}`,
 			wantStatus: http.StatusBadRequest,
 			wantError:  "message 0 has invalid role: invalid",
 		},
@@ -145,7 +145,7 @@ func TestChatCompletions_SuccessfulStreaming(t *testing.T) {
 	}
 	s := NewServer(cfg, "127.0.0.1", 0)
 
-	reqBody := `{"model": "GLM-4.6", "messages": [{"role": "user", "content": "hi"}], "stream": true}`
+	reqBody := `{"model": "GLM-4.7-Flash", "messages": [{"role": "user", "content": "hi"}], "stream": true}`
 	req := httptest.NewRequest("POST", "/api/chat", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -175,7 +175,7 @@ func TestChatCompletions_SuccessfulNonStreaming(t *testing.T) {
 			"id": "chatcmpl-123",
 			"object": "chat.completion",
 			"created": 1677652288,
-			"model": "GLM-4.6",
+			"model": "GLM-4.7-Flash",
 			"choices": [{
 				"index": 0,
 				"message": {
@@ -199,7 +199,7 @@ func TestChatCompletions_SuccessfulNonStreaming(t *testing.T) {
 	}
 	s := NewServer(cfg, "127.0.0.1", 0)
 
-	reqBody := `{"model": "GLM-4.6", "messages": [{"role": "user", "content": "hi"}]}`
+	reqBody := `{"model": "GLM-4.7-Flash", "messages": [{"role": "user", "content": "hi"}]}`
 	req := httptest.NewRequest("POST", "/api/chat", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -224,7 +224,7 @@ func TestChatCompletions_UpstreamError(t *testing.T) {
 	}
 	s := NewServer(cfg, "127.0.0.1", 0)
 
-	reqBody := `{"model": "GLM-4.6", "messages": [{"role": "user", "content": "hi"}]}`
+	reqBody := `{"model": "GLM-4.7-Flash", "messages": [{"role": "user", "content": "hi"}]}`
 	req := httptest.NewRequest("POST", "/api/chat", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -244,7 +244,7 @@ func TestChatCompletions_ConnectionError(t *testing.T) {
 	}
 	s := NewServer(cfg, "127.0.0.1", 0)
 
-	reqBody := `{"model": "GLM-4.6", "messages": [{"role": "user", "content": "hi"}]}`
+	reqBody := `{"model": "GLM-4.7-Flash", "messages": [{"role": "user", "content": "hi"}]}`
 	req := httptest.NewRequest("POST", "/api/chat", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -274,9 +274,9 @@ func TestToolStreamAutoEnable(t *testing.T) {
 		expectToolStream bool
 	}{
 		{
-			name: "GLM-4.6 with tools and stream should enable tool_stream",
+			name: "GLM-4.7-Flash with tools and stream should enable tool_stream",
 			requestBody: `{
-				"model": "GLM-4.6",
+				"model": "GLM-4.7-Flash",
 				"messages": [{"role": "user", "content": "test"}],
 				"stream": true,
 				"tools": [{"type": "function", "function": {"name": "test"}}]
@@ -294,9 +294,9 @@ func TestToolStreamAutoEnable(t *testing.T) {
 			expectToolStream: true,
 		},
 		{
-			name: "GLM-4.6 with tools but no stream should not enable tool_stream",
+			name: "GLM-4.7-Flash with tools but no stream should not enable tool_stream",
 			requestBody: `{
-				"model": "GLM-4.6",
+				"model": "GLM-4.7-Flash",
 				"messages": [{"role": "user", "content": "test"}],
 				"tools": [{"type": "function", "function": {"name": "test"}}]
 			}`,
@@ -312,9 +312,9 @@ func TestToolStreamAutoEnable(t *testing.T) {
 			expectToolStream: false,
 		},
 		{
-			name: "GLM-4.6 with stream but no tools should not enable tool_stream",
+			name: "GLM-4.7-Flash with stream but no tools should not enable tool_stream",
 			requestBody: `{
-				"model": "GLM-4.6",
+				"model": "GLM-4.7-Flash",
 				"messages": [{"role": "user", "content": "test"}],
 				"stream": true
 			}`,
@@ -330,14 +330,14 @@ func TestToolStreamAutoEnable(t *testing.T) {
 			expectToolStream: false,
 		},
 		{
-			name: "GLM-4.5 should not enable tool_stream even with tools and stream",
+			name: "GLM-4.7 with tools and stream should enable tool_stream",
 			requestBody: `{
-				"model": "GLM-4.5",
+				"model": "GLM-4.7",
 				"messages": [{"role": "user", "content": "test"}],
 				"stream": true,
 				"tools": [{"type": "function", "function": {"name": "test"}}]
 			}`,
-			expectToolStream: false,
+			expectToolStream: true,
 		},
 	}
 

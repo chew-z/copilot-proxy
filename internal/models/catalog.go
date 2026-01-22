@@ -48,12 +48,12 @@ var Catalog = ModelCatalog{
 			},
 		},
 		{
-			Name:         "GLM-4.6",
-			Model:        "glm-4.6",
-			ModifiedAt:   "2024-01-01T00:00:00Z",
+			Name:         "GLM-4.7-Flash",
+			Model:        "glm-4.7-flash",
+			ModifiedAt:   "2026-01-22T00:00:00Z",
 			Size:         0,
-			Digest:       "glm-4.6",
-			Capabilities: []string{"tools", "vision"},
+			Digest:       "glm-4.7-flash",
+			Capabilities: []string{"tools"},
 			ContextLen:   200000,
 			Details: ModelDetails{
 				Format:            "glm",
@@ -64,29 +64,13 @@ var Catalog = ModelCatalog{
 			},
 		},
 		{
-			Name:         "GLM-4.5",
-			Model:        "glm-4.5",
-			ModifiedAt:   "2024-01-01T00:00:00Z",
+			Name:         "GLM-4.7-FlashX",
+			Model:        "glm-4.7-flashx",
+			ModifiedAt:   "2026-01-22T00:00:00Z",
 			Size:         0,
-			Digest:       "glm-4.5",
-			Capabilities: []string{"tools", "vision"},
-			ContextLen:   128000,
-			Details: ModelDetails{
-				Format:            "glm",
-				Family:            "glm",
-				Families:          []string{"glm"},
-				ParameterSize:     "cloud",
-				QuantizationLevel: "cloud",
-			},
-		},
-		{
-			Name:         "GLM-4.5-Air",
-			Model:        "glm-4.5-air",
-			ModifiedAt:   "2024-01-01T00:00:00Z",
-			Size:         0,
-			Digest:       "glm-4.5-air",
-			Capabilities: []string{"tools", "vision"},
-			ContextLen:   128000,
+			Digest:       "glm-4.7-flashx",
+			Capabilities: []string{"tools"},
+			ContextLen:   200000,
 			Details: ModelDetails{
 				Format:            "glm",
 				Family:            "glm",
@@ -111,7 +95,7 @@ func IsValidModel(name string) bool {
 // GetModelContextLength returns the context length for a model
 func GetModelContextLength(name string) int {
 	for _, m := range Catalog.Models {
-		if m.Name == name {
+		if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Model, name) {
 			return m.ContextLen
 		}
 	}
@@ -121,7 +105,7 @@ func GetModelContextLength(name string) int {
 // GetModel returns the full model struct if found
 func GetModel(name string) (*Model, bool) {
 	for _, m := range Catalog.Models {
-		if m.Name == name || m.Model == name {
+		if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Model, name) {
 			return &m, true
 		}
 	}

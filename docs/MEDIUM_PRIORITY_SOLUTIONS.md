@@ -48,12 +48,12 @@ type ModelCatalog struct {
 var Catalog = ModelCatalog{
     Models: []Model{
         {
-            Name:         "GLM-4.6",
-            Model:        "GLM-4.6",
-            ModifiedAt:   "2024-01-01T00:00:00Z",
+            Name:         "GLM-4.7-Flash",
+            Model:        "glm-4.7-flash",
+            ModifiedAt:   "2026-01-22T00:00:00Z",
             Size:         0,
-            Digest:       "GLM-4.6",
-            Capabilities: []string{"tools", "vision"},
+            Digest:       "glm-4.7-flash",
+            Capabilities: []string{"tools"},
             ContextLen:   200000,
             Details: ModelDetails{
                 Format:            "glm",
@@ -64,29 +64,13 @@ var Catalog = ModelCatalog{
             },
         },
         {
-            Name:         "GLM-4.5",
-            Model:        "GLM-4.5",
-            ModifiedAt:   "2024-01-01T00:00:00Z",
+            Name:         "GLM-4.7-FlashX",
+            Model:        "glm-4.7-flashx",
+            ModifiedAt:   "2026-01-22T00:00:00Z",
             Size:         0,
-            Digest:       "GLM-4.5",
-            Capabilities: []string{"tools", "vision"},
-            ContextLen:   128000,
-            Details: ModelDetails{
-                Format:            "glm",
-                Family:            "glm",
-                Families:          []string{"glm"},
-                ParameterSize:     "cloud",
-                QuantizationLevel: "cloud",
-            },
-        },
-        {
-            Name:         "GLM-4.5-Air",
-            Model:        "GLM-4.5-Air",
-            ModifiedAt:   "2024-01-01T00:00:00Z",
-            Size:         0,
-            Digest:       "GLM-4.5-Air",
-            Capabilities: []string{"tools", "vision"},
-            ContextLen:   128000,
+            Digest:       "glm-4.7-flashx",
+            Capabilities: []string{"tools"},
+            ContextLen:   200000,
             Details: ModelDetails{
                 Format:            "glm",
                 Family:            "glm",
@@ -238,8 +222,8 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
         "type": "enabled",
     }
     
-    // Auto-enable tool_stream for GLM-4.6 when tools are present and streaming is enabled
-    if model == "GLM-4.6" {
+    // Auto-enable tool_stream for GLM-4.7 family models when tools are present and streaming is enabled
+    if model == "glm-4.7" || model == "glm-4.7-flash" || model == "glm-4.7-flashx" {
         _, hasTools := bodyMap["tools"]
         stream, _ := bodyMap["stream"].(bool)
         if hasTools && stream {
@@ -309,7 +293,7 @@ func TestChatCompletions_VisionContent(t *testing.T) {
     
     // Vision content with text and image
     reqBody := `{
-        "model": "GLM-4.6",
+        "model": "GLM-4.7-Flash",
         "messages": [{
             "role": "user",
             "content": [
@@ -345,7 +329,7 @@ func TestChatCompletions_ContextCancellation(t *testing.T) {
     }
     s := NewServer(cfg, "127.0.0.1", 0)
     
-    reqBody := `{"model": "GLM-4.6", "messages": [{"role": "user", "content": "hi"}], "stream": true}`
+    reqBody := `{"model": "GLM-4.7-Flash", "messages": [{"role": "user", "content": "hi"}], "stream": true}`
     req := httptest.NewRequest("POST", "/api/chat", strings.NewReader(reqBody))
     req.Header.Set("Content-Type", "application/json")
     

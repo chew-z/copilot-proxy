@@ -59,7 +59,7 @@ func (s *Server) handleShow(c *gin.Context) {
 		modelName = req.Model
 	}
 	if modelName == "" {
-		modelName = "GLM-4.6"
+		modelName = "GLM-4.7-Flash"
 	}
 
 	contextLength := models.GetModelContextLength(modelName)
@@ -142,9 +142,9 @@ func (s *Server) handleChatCompletions(c *gin.Context) {
 	canonicalModel := models.GetCanonicalModelName(model)
 	bodyMap["model"] = canonicalModel
 
-	// Auto-enable tool_stream for GLM-4.6 and GLM-4.7 when tools are present and streaming is enabled
+	// Auto-enable tool_stream for GLM-4.7 family models when tools are present and streaming is enabled
 	// This enables real-time streaming of tool call parameters
-	if canonicalModel == "glm-4.6" || canonicalModel == "glm-4.7" {
+	if canonicalModel == "glm-4.7" || canonicalModel == "glm-4.7-flash" || canonicalModel == "glm-4.7-flashx" {
 		_, hasTools := bodyMap["tools"]
 		stream, _ := bodyMap["stream"].(bool)
 		if hasTools && stream {
